@@ -1,0 +1,7 @@
+marketplace,asin,sku,title,velocity,fbaActive,fbaReserved,fbaInbound,awdTotal,warehouse,fbaFull
+US,B0AAA11111,SKU-ALPHA,Alpha Silicone Spatula 3-Pack,4.1,420,18,120,0,40,false
+US,B0BBB22222,SKU-BRAVO,Bravo Stainless Mixing Bowl,1.4,80,6,0,20,0,false
+US,B0CCC33333,SKU-CHARLIE,Charlie Chef Knife 8-Inch,6.5,60,12,80,0,0,false
+US,B0DDD44444,SKU-DELTA,Delta Digital Kitchen Scale,0,150,0,0,0,25,false
+US,B0EEE55555,SKU-ECHO,Echo Bamboo Cutting Board,0.3,10,0,0,0,0,false
+US,B0GGG77777,SKU-GOLF,Golf Immersion Blender Pro,0,0,0,40,0,12,false
