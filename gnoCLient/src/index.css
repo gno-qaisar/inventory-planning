@@ -384,23 +384,43 @@ main {
   text-align: center !important;
 }
 
+.ag-theme-quartz .ag-pinned-left-cols-container .ag-cell,
 .ag-pinned-left-cols-container .ag-cell {
-  background: inherit;
+  background-color: #ffffff !important;
+  z-index: 2;
+}
+
+.ag-theme-quartz .ag-pinned-left-header,
+.ag-pinned-left-header {
+  background-color: #f9fafb !important;
+  z-index: 2;
+}
+
+.ag-theme-quartz .ag-row:hover .ag-pinned-left-cols-container .ag-cell,
+.ag-theme-quartz .ag-row.ag-row-hover .ag-cell {
+  background-color: #f5f3ef !important;
+}
+
+.ag-theme-quartz .ag-row.ag-row-selected .ag-cell {
+  background-color: #f5f3ef !important;
 }
 
 /* ── Cell Components ──────────────────────────────────────────────────── */
 .prodname {
-  max-width: 260px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  max-width: 100% !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
   text-align: center;
 }
 
 .title-cell {
-  display: inline-block !important;
+  display: block !important;
   width: 100% !important;
   max-width: 100% !important;
+  min-width: 0 !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
@@ -514,6 +534,8 @@ main {
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  white-space: nowrap;
   gap: 5px;
   cursor: pointer;
   border: 1px solid var(--gray-200);

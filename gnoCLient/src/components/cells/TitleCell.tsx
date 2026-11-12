@@ -8,7 +8,16 @@ export function TitleCell({ data }: ICellRendererParams<ComputedSkuRow>) {
     <span
       className="title-cell prodname"
       title={titleText}
-      style={{ textAlign: 'center', width: '100%' }}
+      style={{
+        display: 'block',
+        width: '100%',
+        maxWidth: '100%',
+        minWidth: 0,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        textAlign: 'center',
+      }}
     >
       {titleText}
     </span>

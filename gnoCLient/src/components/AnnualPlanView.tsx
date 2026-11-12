@@ -12,6 +12,7 @@ import { gridTheme } from '../grid/theme'
 import { centerStyle, defaultColDef } from '../grid/gridDefaults'
 import { useForecastData } from '../store/useForecastData'
 import { MatrixMonthCell, StackedPinnedCell } from './cells/AnnualPlanCells'
+import { TitleCell } from './cells/TitleCell'
 
 const MONTH_LABELS = buildMonthLabels()
 
@@ -33,15 +34,7 @@ export function AnnualPlanView() {
           if (p.data.sku === '__TOTAL_ROW__') {
             return <strong>All products</strong>
           }
-          return (
-            <span
-              className="title-cell prodname"
-              title={p.data.title}
-              style={{ textAlign: 'center', width: '100%' }}
-            >
-              {p.data.title || p.data.sku}
-            </span>
-          )
+          return <TitleCell {...p} />
         },
       },
       {

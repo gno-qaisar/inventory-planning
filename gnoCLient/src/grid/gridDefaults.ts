@@ -6,6 +6,8 @@ export const centerStyle: CellStyle = {
   alignItems: 'center',
   justifyContent: 'center',
   textAlign: 'center',
+  overflow: 'hidden',
+  minWidth: 0,
 }
 
 export const defaultColDef: ColDef = {
