@@ -11,3 +11,4 @@ export const numericTransformer: ValueTransformer = {
     return isNaN(parsed) ? null : parsed
   },
 }
+

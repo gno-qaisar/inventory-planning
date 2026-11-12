@@ -11,3 +11,4 @@ export function StatusCell({ data }: ICellRendererParams<ComputedSkuRow>) {
     </span>
   )
 }
+

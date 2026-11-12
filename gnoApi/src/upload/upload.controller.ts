@@ -7,6 +7,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common'
 import { FileInterceptor } from '@nestjs/platform-express'
+import type { UploadCsvResponse, UploadXlsxResponse } from '@gno/shared'
 import { UploadService } from './upload.service'
 
 @Controller('upload')
@@ -19,7 +20,7 @@ export class UploadController {
     @UploadedFile() file: Express.Multer.File,
     @Body('sessionId') sessionId?: string,
     @Query('sessionId') querySessionId?: string,
-  ) {
+  ): Promise<UploadCsvResponse> {
     return this.uploadService.handleCsvUpload(file, sessionId || querySessionId)
   }
 
@@ -29,7 +30,7 @@ export class UploadController {
     @UploadedFile() file: Express.Multer.File,
     @Body('sessionId') sessionId?: string,
     @Query('sessionId') querySessionId?: string,
-  ) {
+  ): Promise<UploadXlsxResponse> {
     return this.uploadService.handleXlsxUpload(file, sessionId || querySessionId)
   }
 }

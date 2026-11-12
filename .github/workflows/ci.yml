@@ -45,3 +45,4 @@ jobs:
 
       - name: Build Client
         run: pnpm --filter gnoclient build
+

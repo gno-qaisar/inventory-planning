@@ -1,12 +1,7 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common'
-import * as Papa from 'papaparse'
+import { Injectable, Logger } from '@nestjs/common'
 import {
-  buildMonthLabels,
   buildSkuInputs,
   computeAllRows,
-  monthHeader,
-  MONTH_INDEXES,
-  type AnnualTab,
   type ComputedSkuRow,
   type InventoryRow,
   type ManualOverrides,
@@ -167,86 +162,5 @@ export class ForecastService {
 
     await this.overrideRepo.save(override)
     await this.historyService.logEvent(sessionId, 'patch_override', { sku, patch })
-  }
-
-  async searchSkus(sessionId: string, query: string): Promise<ComputedSkuRow[]> {
-    const rows = await this.compute(sessionId)
-    if (!query.trim()) return rows
-    const q = query.trim().toLowerCase()
-    return rows.filter(
-      (r) =>
-        r.sku.toLowerCase().includes(q) ||
-        r.asin.toLowerCase().includes(q) ||
-        r.title.toLowerCase().includes(q),
-    )
-  }
-
-  async exportTabCsv(sessionId: string, tab: AnnualTab): Promise<string> {
-    const validTabs: AnnualTab[] = ['forecast', 'eom', 'purchase', 'sales']
-    if (!validTabs.includes(tab)) {
-      throw new BadRequestException(
-        `Invalid tab '${tab}'. Expected one of: ${validTabs.join(', ')}.`,
-      )
-    }
-
-    await this.sessionRepo.findById(sessionId)
-    const rows = await this.compute(sessionId)
-    const labels = buildMonthLabels()
-
-    const identityCols = (row: ComputedSkuRow) => ({
-      sku: row.sku,
-      asin: row.asin,
-      title: row.title,
-    })
-
-    const monthFields = (values: number[]) => {
-      const out: Record<string, string | number> = {}
-      MONTH_INDEXES.forEach((m, i) => {
-        out[monthHeader(m, labels)] = Math.round((values[i] ?? 0) * 100) / 100
-      })
-      return out
-    }
-
-    let records: Record<string, string | number>[] = []
-
-    switch (tab) {
-      case 'forecast':
-        records = rows.map((row) => ({
-          ...identityCols(row),
-          avg_forecast_excl_zero: Math.round(row.avgForecastExclZero * 100) / 100,
-          multiple: row.growthMultiple,
-          fallback_units: row.fallbackUnits,
-          ...monthFields(row.forecast),
-        }))
-        break
-      case 'eom':
-        records = rows.map((row) => ({
-          ...identityCols(row),
-          buffer_months: row.bufferMonths,
-          [monthHeader(0, labels)]: row.startingStock,
-          ...monthFields(row.eom),
-        }))
-        break
-      case 'purchase':
-        records = rows.map((row) => ({
-          ...identityCols(row),
-          lead_time_days: row.leadTimeDays,
-          landing_offset_months: row.landingOffset,
-          ...monthFields(row.orders),
-        }))
-        break
-      case 'sales':
-        records = rows.map((row) => ({
-          ...identityCols(row),
-          selling_price: Math.round(row.sellingPrice * 100) / 100,
-          ...monthFields(row.sales),
-          eight_month_total: Math.round(row.totalSales * 100) / 100,
-        }))
-        break
-      default:
-        throw new BadRequestException(`Invalid tab '${tab}'`)
-    }
-
-    return Papa.unparse(records)
   }
 }

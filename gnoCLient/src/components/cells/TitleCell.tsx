@@ -14,3 +14,4 @@ export function TitleCell({ data }: ICellRendererParams<ComputedSkuRow>) {
     </span>
   )
 }
+

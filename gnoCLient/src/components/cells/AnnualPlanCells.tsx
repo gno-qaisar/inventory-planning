@@ -44,3 +44,4 @@ export function StackedPinnedCell({ data, monthIndex, isTotal }: PinnedCellProps
     </span>
   )
 }
+

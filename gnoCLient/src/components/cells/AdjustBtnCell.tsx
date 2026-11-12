@@ -18,3 +18,4 @@ export function AdjustBtnCell({ data, onOpen }: AdjustBtnCellProps) {
     </button>
   )
 }
+
