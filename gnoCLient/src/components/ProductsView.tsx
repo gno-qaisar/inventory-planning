@@ -44,8 +44,8 @@ export function ProductsView() {
   const adjustRow = adjustSku ? visibleRows.find((r) => r.sku === adjustSku) ?? null : null
 
   const columnDefs = useMemo(
-    () => buildProductsColumnDefs(setAdjustSku),
-    [],
+    () => buildProductsColumnDefs(setAdjustSku, handleOverride),
+    [handleOverride],
   )
 
   return (

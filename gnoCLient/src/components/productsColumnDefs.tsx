@@ -1,14 +1,16 @@
 import type { ColDef } from 'ag-grid-community'
-import { getWorstHealth, type ComputedSkuRow } from '@gno/shared'
+import { getWorstHealth, type ComputedSkuRow, type ManualOverrides } from '@gno/shared'
 import { formatInt, formatUsd } from '../domain/format'
 import { centerStyle } from '../grid/gridDefaults'
 import { TitleCell } from './cells/TitleCell'
 import { AdjustBtnCell } from './cells/AdjustBtnCell'
 import { StatusCell } from './cells/StatusCell'
 import { OutlookCell } from './OutlookCell'
+import { EditInputCell } from './cells/EditInputCell'
 
 export function buildProductsColumnDefs(
   onOpenAdjust: (sku: string) => void,
+  onSaveOverride?: (sku: string, patch: Partial<ManualOverrides>) => void,
 ): ColDef<ComputedSkuRow>[] {
   return [
     {
@@ -83,25 +85,31 @@ export function buildProductsColumnDefs(
       headerName: '3PL',
       field: 'threePlInventory',
       colId: 'threePl',
-      width: 85,
-      editable: true,
-      cellEditor: 'agNumberCellEditor',
+      width: 95,
+      minWidth: 85,
       headerClass: 'text-center',
       cellClass: 'text-center',
       cellStyle: centerStyle,
-      valueFormatter: ({ value }) => formatInt(Number(value) || 0),
+      cellRenderer: EditInputCell,
+      cellRendererParams: {
+        field: 'threePlInventory',
+        onSave: onSaveOverride,
+      },
     },
     {
       headerName: 'In production',
       field: 'inventoryInProduction',
       colId: 'inProd',
-      width: 95,
-      editable: true,
-      cellEditor: 'agNumberCellEditor',
+      width: 105,
+      minWidth: 95,
       headerClass: 'text-center',
       cellClass: 'text-center',
       cellStyle: centerStyle,
-      valueFormatter: ({ value }) => formatInt(Number(value) || 0),
+      cellRenderer: EditInputCell,
+      cellRendererParams: {
+        field: 'inventoryInProduction',
+        onSave: onSaveOverride,
+      },
     },
     {
       headerName: 'Forecast units',
