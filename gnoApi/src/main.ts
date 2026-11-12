@@ -1,4 +1,5 @@
 import { Logger, ValidationPipe } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { NestFactory } from '@nestjs/core'
 import { AppModule } from './app.module'
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter'
@@ -21,7 +22,8 @@ async function bootstrap() {
   app.useGlobalFilters(new GlobalExceptionFilter())
   app.enableShutdownHooks()
 
-  const port = process.env.PORT ?? 3000
+  const configService = app.get(ConfigService)
+  const port = configService.get<number>('PORT', 3000)
   await app.listen(port)
   logger.log(`GNO Inventory Forecasting API listening on port ${port}`)
 }

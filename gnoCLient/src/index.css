@@ -597,9 +597,18 @@ main {
 }
 
 .total-row td,
-.ag-row-pinned {
+.ag-row-pinned,
+.ag-row-pinned .ag-cell,
+.ag-floating-bottom,
+.ag-floating-bottom .ag-row,
+.ag-floating-bottom .ag-cell,
+.ag-floating-bottom .ag-pinned-left-cols-container .ag-cell {
   background: var(--cream) !important;
   font-weight: 600;
+}
+
+.ag-floating-bottom,
+.ag-row-pinned {
   border-top: 1px solid var(--gray-200) !important;
 }
 
