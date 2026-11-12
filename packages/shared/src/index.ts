@@ -2,7 +2,14 @@ export * from './types'
 export * from './constants'
 export * from './monthLabels'
 export * from './engine'
-export * from './join'
+export {
+  buildSkuInputs,
+  skuKey,
+  normalizeMonthKey,
+  aggregateSales,
+  summarizeJoin,
+  type HistoryAgg,
+} from './join'
 export * from './csv/headers'
 export * from './csv/validate'
-export * from './csv/parse'
+export { parseSalesRows, parseInventoryRows } from './csv/parse'
