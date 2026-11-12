@@ -63,13 +63,13 @@ export function computeSkuRow(sku: SkuInputs, anchor: Date = DEFAULT_ANCHOR_DATE
     resolvedInputs(sku)
   const offset = landingOffsetMonths(leadTimeDays)
   const forecast: number[] = []
-  const forecastOverrideMonths = new Set<MonthIndex>()
+  const forecastOverrideMonths: MonthIndex[] = []
   let usedFallbackMonth = false
 
   for (const m of MONTH_INDEXES) {
     const override = sku.overrides?.forecastByMonth?.[m]
     if (override !== undefined) {
-      forecastOverrideMonths.add(m)
+      forecastOverrideMonths.push(m)
       forecast.push(Math.max(0, override))
     } else {
       const perMonthMult = sku.overrides?.multiplesPerMonth?.[m]
@@ -81,11 +81,11 @@ export function computeSkuRow(sku: SkuInputs, anchor: Date = DEFAULT_ANCHOR_DATE
   }
 
   const manualOrders: number[] = []
-  const orderMonths = new Set<MonthIndex>()
+  const orderMonths: MonthIndex[] = []
   for (const m of MONTH_INDEXES) {
     const qty = Math.max(0, sku.overrides?.ordersByMonth?.[m] ?? 0)
     manualOrders.push(qty)
-    if (qty > 0) orderMonths.add(m)
+    if (qty > 0) orderMonths.push(m)
   }
 
   const threePlInventory = Math.max(0, sku.overrides?.threePlInventory ?? sku.threePlInventory ?? 0)
@@ -157,8 +157,8 @@ export function computeSkuRow(sku: SkuInputs, anchor: Date = DEFAULT_ANCHOR_DATE
     sku.overrides?.leadTimeDays !== undefined ||
     sku.overrides?.sellingPrice !== undefined ||
     hasPerMonthMultiples ||
-    forecastOverrideMonths.size > 0 ||
-    orderMonths.size > 0
+    forecastOverrideMonths.length > 0 ||
+    orderMonths.length > 0
 
   const needsManualInput =
     sku.inInventory &&

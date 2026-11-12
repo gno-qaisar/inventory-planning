@@ -10,8 +10,7 @@ import {
 } from '@gno/shared'
 import { formatInt } from '../domain/format'
 import { gridTheme } from '../grid/theme'
-import { useAppSelector } from '../store/hooks'
-import { selectTotals, selectVisibleRows } from '../store/workspaceSlice'
+import { useForecastData } from '../store/useForecastData'
 
 const MONTH_LABELS = buildMonthLabels()
 
@@ -69,8 +68,7 @@ function StackedPinnedCell({ data, monthIndex, isTotal }: PinnedCellProps) {
 }
 
 export function AnnualPlanView() {
-  const visibleRows = useAppSelector(selectVisibleRows)
-  const totals = useAppSelector(selectTotals)
+  const { visibleRows, totals } = useForecastData()
 
   const columnDefs = useMemo<ColDef<ComputedSkuRow>[]>(() => {
     const baseCols: ColDef<ComputedSkuRow>[] = [
@@ -184,8 +182,8 @@ export function AnnualPlanView() {
       firstRiskMonth: null,
       firstRiskMonthName: '—',
       orderBy: '—',
-      forecastOverrideMonths: new Set(),
-      orderMonths: new Set(),
+      forecastOverrideMonths: [],
+      orderMonths: [],
     }
     return [totalRow]
   }, [visibleRows, totals])

@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { AnnualPlanView } from './components/AnnualPlanView'
 import { KpiBar } from './components/KpiBar'
 import { ProductsView } from './components/ProductsView'
@@ -7,15 +6,11 @@ import { TopBar } from './components/TopBar'
 import { UploadModal } from './components/UploadModal'
 import { registerGridModules } from './grid/registerGrid'
 import { useAppDispatch, useAppSelector } from './store/hooks'
-import { useLazyGetSessionQuery } from './store/api/forecastApi'
+import { useForecastData } from './store/useForecastData'
 import {
-  applyApiRows,
-  selectLoaded,
-  selectRows,
   selectWorkspace,
   setEomHealthFilter,
   setSearch,
-  setSessionId,
   setView,
   type EomHealthFilter,
 } from './store/workspaceSlice'
@@ -32,26 +27,7 @@ const STATUS_OPTS: { id: EomHealthFilter; label: string }[] = [
 export default function App() {
   const dispatch = useAppDispatch()
   const workspace = useAppSelector(selectWorkspace)
-  const rows = useAppSelector(selectRows)
-  const loaded = useAppSelector(selectLoaded)
-  const [fetchSession] = useLazyGetSessionQuery()
-
-  useEffect(() => {
-    const savedId =
-      typeof window !== 'undefined' ? localStorage.getItem('gno_active_session_id') : null
-    if (!savedId) return
-    dispatch(setSessionId(savedId))
-    void (async () => {
-      try {
-        const data = await fetchSession(savedId).unwrap()
-        if (data?.rows && data.rows.length > 0) {
-          dispatch(applyApiRows(data.rows))
-        }
-      } catch {
-        localStorage.removeItem('gno_active_session_id')
-      }
-    })()
-  }, [fetchSession, dispatch])
+  const { rawRows, loaded, isLoading } = useForecastData()
 
   const handleKpiFilter = (f: EomHealthFilter) => {
     dispatch(setEomHealthFilter(f))
@@ -64,7 +40,7 @@ export default function App() {
       <main>
         {loaded && (
           <KpiBar
-            rows={rows}
+            rows={rawRows}
             activeFilter={workspace.eomHealthFilter}
             onFilter={handleKpiFilter}
           />
@@ -140,7 +116,9 @@ export default function App() {
         </div>
 
         <div className="grid-wrap">
-          {!loaded ? (
+          {isLoading && !loaded ? (
+            <section className="empty-state">Loading forecast workspace…</section>
+          ) : !loaded ? (
             <section className="empty-state">
               No workspace data. Upload a Sales History CSV and a Current Inventory CSV to begin.
             </section>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   buildMonthLabels,
   monthHeader,
@@ -9,12 +9,6 @@ import {
   type MonthIndex,
 } from '@gno/shared'
 import { formatInt } from '../domain/format'
-import { useAppDispatch } from '../store/hooks'
-import {
-  resetLocalOverrides,
-  setMultipleMonth,
-  setOrderMonth,
-} from '../store/workspaceSlice'
 
 const MONTH_LABELS = buildMonthLabels()
 
@@ -40,7 +34,6 @@ interface Props {
 }
 
 export function AdjustPlanModal({ row, onClose, onOverride }: Props) {
-  const dispatch = useAppDispatch()
   const [localLeadTime, setLocalLeadTime] = useState(String(row.leadTimeDays))
   const [localBuffer, setLocalBuffer] = useState(String(row.bufferMonths))
 
@@ -61,62 +54,93 @@ export function AdjustPlanModal({ row, onClose, onOverride }: Props) {
     return init
   })
 
+  useEffect(() => {
+    setLocalLeadTime(String(row.leadTimeDays))
+    setLocalBuffer(String(row.bufferMonths))
+    const mults: Partial<Record<MonthIndex, string>> = {}
+    const ords: Partial<Record<MonthIndex, string>> = {}
+    for (const [i, m] of MONTH_INDEXES.entries()) {
+      const pm = row.multiplesPerMonth?.[m]
+      mults[m] = String(pm !== undefined ? pm : row.growthMultiple || 1.1)
+      ords[m] = String(row.orders[i] || 0)
+    }
+    setLocalMultiples(mults)
+    setLocalOrders(ords)
+  }, [row])
+
   const commitLeadTime = () => {
     const v = parseFloat(localLeadTime)
-    if (!isNaN(v) && v > 0) onOverride(row.sku, { leadTimeDays: v })
+    if (!isNaN(v) && v > 0 && v !== row.leadTimeDays) onOverride(row.sku, { leadTimeDays: v })
   }
 
   const commitBuffer = () => {
     const v = parseFloat(localBuffer)
-    if (!isNaN(v) && v >= 0) onOverride(row.sku, { bufferMonths: v })
+    if (!isNaN(v) && v >= 0 && v !== row.bufferMonths) onOverride(row.sku, { bufferMonths: v })
   }
 
   const commitMultiple = (month: MonthIndex, valStr: string) => {
     const v = parseFloat(valStr)
     if (!isNaN(v) && v >= 0) {
-      dispatch(setMultipleMonth({ sku: row.sku, month, value: v }))
-      onOverride(row.sku, { multiplesPerMonth: { ...(row.multiplesPerMonth ?? {}), [month]: v } })
+      onOverride(row.sku, { multiplesPerMonth: { [month]: v } })
     }
   }
 
   const commitOrder = (month: MonthIndex, valStr: string) => {
     const v = parseInt(valStr, 10)
     const val = isNaN(v) ? 0 : Math.max(0, v)
-    dispatch(setOrderMonth({ sku: row.sku, month, value: val }))
-    const existingOrders: Partial<Record<MonthIndex, number>> = {}
-    MONTH_INDEXES.forEach((m, idx) => {
-      existingOrders[m] = row.orders[idx] || 0
-    })
-    existingOrders[month] = val
-    onOverride(row.sku, { ordersByMonth: existingOrders })
+    onOverride(row.sku, { ordersByMonth: { [month]: val } })
   }
 
   const handleSuggestOrders = () => {
-    const threshold = 0.25 * row.avgForecastExclZero * row.bufferMonths
-    const newOrders: Partial<Record<MonthIndex, number>> = {}
-    MONTH_INDEXES.forEach((m, idx) => {
-      newOrders[m] = row.orders[idx] || 0
-    })
-    for (const [i, m] of MONTH_INDEXES.entries()) {
-      const eomVal = row.eom[i]
-      if (eomVal < threshold) {
-        const qty = Math.ceil(threshold - eomVal)
-        dispatch(setOrderMonth({ sku: row.sku, month: m, value: qty }))
-        setLocalOrders((p) => ({ ...p, [m]: String(qty) }))
-        newOrders[m] = qty
+    const shift = Math.round(Number(localLeadTime) / 30) || 3
+    const forecasts = row.forecast
+    const threshold = 0.25 * row.avgForecastExclZero * Number(localBuffer)
+    const orders = [...row.orders]
+    const starting = row.startingStock + (row.threePlInventory ?? 0)
+
+    for (let month = shift; month < 8; month++) {
+      let ending = starting
+      for (let m = 0; m <= month; m++) {
+        const arriving = (m === 0 ? row.currentInbound : 0) + (m >= shift ? orders[m - shift] : 0)
+        ending += arriving - forecasts[m]
+      }
+      const missing = Math.ceil(threshold) + 1 - ending
+      if (missing > 0) {
+        orders[month - shift] += missing
       }
     }
-    onOverride(row.sku, { ordersByMonth: newOrders })
+
+    const newOrdersMap: Partial<Record<MonthIndex, number>> = {}
+    MONTH_INDEXES.forEach((m, idx) => {
+      const qty = orders[idx] || 0
+      newOrdersMap[m] = qty
+      setLocalOrders((p) => ({ ...p, [m]: String(qty) }))
+    })
+    onOverride(row.sku, { ordersByMonth: newOrdersMap })
   }
 
   const handleReset = () => {
-    dispatch(resetLocalOverrides())
-    setLocalLeadTime(String(row.leadTimeDays))
-    setLocalBuffer(String(row.bufferMonths))
+    const clearedMultiples: Partial<Record<MonthIndex, number>> = {}
+    const clearedOrders: Partial<Record<MonthIndex, number>> = {}
     for (const m of MONTH_INDEXES) {
-      setLocalMultiples((p) => ({ ...p, [m]: '1.1' }))
-      setLocalOrders((p) => ({ ...p, [m]: '0' }))
+      clearedMultiples[m] = 1.1
+      clearedOrders[m] = 0
     }
+    setLocalLeadTime('90')
+    setLocalBuffer('1')
+    setLocalMultiples(
+      Object.fromEntries(MONTH_INDEXES.map((m) => [m, '1.1'])),
+    )
+    setLocalOrders(
+      Object.fromEntries(MONTH_INDEXES.map((m) => [m, '0'])),
+    )
+    onOverride(row.sku, {
+      leadTimeDays: 90,
+      bufferMonths: 1,
+      growthMultiple: 1.1,
+      multiplesPerMonth: clearedMultiples,
+      ordersByMonth: clearedOrders,
+    })
   }
 
   const inboundByMonth = useMemo(() => {

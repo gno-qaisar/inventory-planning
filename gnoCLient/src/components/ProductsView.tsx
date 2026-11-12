@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AgGridReact } from 'ag-grid-react'
 import type { CellStyle, ColDef, ICellRendererParams } from 'ag-grid-community'
 import {
@@ -10,13 +10,8 @@ import {
 } from '@gno/shared'
 import { formatInt, formatUsd } from '../domain/format'
 import { gridTheme } from '../grid/theme'
-import { useAppDispatch, useAppSelector } from '../store/hooks'
 import { usePatchOverridesMutation } from '../store/api/forecastApi'
-import {
-  applyApiRows,
-  patchLocalOverrides,
-  selectVisibleRows,
-} from '../store/workspaceSlice'
+import { useForecastData } from '../store/useForecastData'
 import { OutlookCell } from './OutlookCell'
 import { AdjustPlanModal } from './AdjustPlanModal'
 
@@ -95,9 +90,15 @@ interface EditInputProps extends ICellRendererParams<ComputedSkuRow> {
 }
 
 function EditInputCell({ data, field, onSave }: EditInputProps) {
-  if (!data) return null
-  const initial = field === 'threePlInventory' ? data.threePlInventory ?? 0 : data.inventoryInProduction ?? 0
+  const initial =
+    field === 'threePlInventory' ? data?.threePlInventory ?? 0 : data?.inventoryInProduction ?? 0
   const [val, setVal] = useState(String(initial))
+
+  useEffect(() => {
+    setVal(String(initial))
+  }, [initial])
+
+  if (!data) return null
 
   return (
     <input
@@ -108,34 +109,29 @@ function EditInputCell({ data, field, onSave }: EditInputProps) {
       onBlur={() => {
         const num = Math.max(0, Math.round(Number(val) || 0))
         setVal(String(num))
-        onSave(data.sku, { [field]: num })
+        if (num !== initial) {
+          onSave(data.sku, { [field]: num })
+        }
       }}
     />
   )
 }
 
 export function ProductsView() {
-  const dispatch = useAppDispatch()
-  const visibleRows = useAppSelector(selectVisibleRows)
-  const sessionId = useAppSelector((s) => s.workspace.sessionId)
+  const { visibleRows, sessionId } = useForecastData()
   const [adjustSku, setAdjustSku] = useState<string | null>(null)
   const [patchApiOverrides] = usePatchOverridesMutation()
 
   const handleOverride = useCallback(
     async (sku: string, patch: Partial<ManualOverrides>) => {
-      dispatch(patchLocalOverrides({ sku, patch }))
-      if (sessionId) {
-        try {
-          const res = await patchApiOverrides({ sessionId, sku, patch }).unwrap()
-          if (res?.rows && Array.isArray(res.rows)) {
-            dispatch(applyApiRows(res.rows))
-          }
-        } catch (err) {
-          console.error('ProductsView: failed to patch override', err)
-        }
+      if (!sessionId) return
+      try {
+        await patchApiOverrides({ sessionId, sku, patch }).unwrap()
+      } catch (err) {
+        console.error('ProductsView: failed to patch override', err)
       }
     },
-    [sessionId, patchApiOverrides, dispatch],
+    [sessionId, patchApiOverrides],
   )
 
   const adjustRow = adjustSku ? visibleRows.find((r) => r.sku === adjustSku) ?? null : null

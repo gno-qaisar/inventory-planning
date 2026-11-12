@@ -166,8 +166,8 @@ export interface ComputedSkuRow {
   firstRiskMonth: number | null
   firstRiskMonthName: string
   orderBy: string
-  forecastOverrideMonths: Set<MonthIndex> | MonthIndex[]
-  orderMonths: Set<MonthIndex> | MonthIndex[]
+  forecastOverrideMonths: MonthIndex[]
+  orderMonths: MonthIndex[]
   multiplesPerMonth?: Partial<Record<MonthIndex, number>>
   threePlInventory?: number
   inventoryInProduction?: number

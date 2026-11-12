@@ -1,6 +1,6 @@
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import { useRecalculateMutation } from '../store/api/forecastApi'
-import { applyApiRows, closeRecalcDialog, setDirtyFlag } from '../store/workspaceSlice'
+import { closeRecalcDialog, setDirtyFlag } from '../store/workspaceSlice'
 
 export function RecalcDialog() {
   const dirtyFlag = useAppSelector((s) => s.workspace.dirtyFlag)
@@ -13,8 +13,7 @@ export function RecalcDialog() {
 
   const handleRecalc = async () => {
     try {
-      const result = await recalculate(sessionId).unwrap()
-      dispatch(applyApiRows(result.rows))
+      await recalculate(sessionId).unwrap()
       dispatch(setDirtyFlag(false))
       dispatch(closeRecalcDialog())
     } catch (err) {
