@@ -1,4 +1,5 @@
 import {
+  DEFAULT_ANCHOR_DATE,
   DEFAULT_BUFFER_MONTHS,
   DEFAULT_FALLBACK_UNITS,
   DEFAULT_GROWTH_MULTIPLE,
@@ -8,6 +9,8 @@ import {
 import { buildMonthLabels, monthHeader } from './monthLabels'
 import type { ComputedSkuRow, MonthIndex, SkuInputs } from './types'
 import { HORIZON_MONTHS, MONTH_INDEXES } from './types'
+
+export { DEFAULT_ANCHOR_DATE }
 
 export function landingOffsetMonths(leadTimeDays: number): number {
   return Math.round(leadTimeDays / 30)
@@ -33,9 +36,13 @@ function resolvedInputs(sku: SkuInputs) {
   return { growthMultiple, fallbackUnits, bufferMonths, leadTimeDays, sellingPrice }
 }
 
-export const DEFAULT_ANCHOR_DATE = new Date(2026, 9, 1)
-
 export function forecastMonthKey(index: MonthIndex, anchor: Date = DEFAULT_ANCHOR_DATE): string | null {
+  const forecastMonth = new Date(anchor.getFullYear(), anchor.getMonth() + index, 1)
+  const priorYearMonth = new Date(forecastMonth.getFullYear() - 1, forecastMonth.getMonth(), 1)
+  return `${priorYearMonth.getFullYear()}-${String(priorYearMonth.getMonth() + 1).padStart(2, '0')}`
+}
+
+export function priorYearMonthKey(index: number, anchor: Date = DEFAULT_ANCHOR_DATE): string {
   const forecastMonth = new Date(anchor.getFullYear(), anchor.getMonth() + index, 1)
   const priorYearMonth = new Date(forecastMonth.getFullYear() - 1, forecastMonth.getMonth(), 1)
   return `${priorYearMonth.getFullYear()}-${String(priorYearMonth.getMonth() + 1).padStart(2, '0')}`
@@ -58,6 +65,37 @@ function monthForecast(
   }
 }
 
+export function suggestOrders(
+  forecasts: number[],
+  bufferMonths: number,
+  leadTimeDays: number,
+  startingUnits: number,
+  currentInbound: number,
+  existingOrders: number[] = Array(HORIZON_MONTHS).fill(0),
+): number[] {
+  const nonzeroForecast = forecasts.filter((u) => u > 0)
+  const avg =
+    nonzeroForecast.length > 0 ? nonzeroForecast.reduce((s, u) => s + u, 0) / nonzeroForecast.length : 0
+  const threshold = STOCK_GREEN_FACTOR * avg * bufferMonths
+  const shift = landingOffsetMonths(leadTimeDays)
+  const orders = [...existingOrders]
+
+  for (let month = shift; month < HORIZON_MONTHS; month++) {
+    const arr = Array(HORIZON_MONTHS).fill(0)
+    arr[0] += currentInbound
+    orders.forEach((q, placed) => {
+      const at = placed + shift
+      if (q > 0 && at < HORIZON_MONTHS) arr[at] += q
+    })
+
+    let ending = startingUnits
+    for (let m = 0; m <= month; m++) ending += arr[m] - forecasts[m]
+    const missing = Math.ceil(threshold) + 1 - ending
+    if (missing > 0) orders[month - shift] += missing
+  }
+  return orders
+}
+
 export function computeSkuRow(sku: SkuInputs, anchor: Date = DEFAULT_ANCHOR_DATE): ComputedSkuRow {
   const { growthMultiple, fallbackUnits, bufferMonths, leadTimeDays, sellingPrice } =
     resolvedInputs(sku)
@@ -76,7 +114,7 @@ export function computeSkuRow(sku: SkuInputs, anchor: Date = DEFAULT_ANCHOR_DATE
       const effectiveMultiple = perMonthMult !== undefined ? perMonthMult : growthMultiple
       const result = monthForecast(sku, m, effectiveMultiple, fallbackUnits, anchor)
       usedFallbackMonth = usedFallbackMonth || result.usedFallback
-      forecast.push(Math.max(0, result.value))
+      forecast.push(result.value)
     }
   }
 
@@ -89,15 +127,16 @@ export function computeSkuRow(sku: SkuInputs, anchor: Date = DEFAULT_ANCHOR_DATE
   }
 
   const threePlInventory = Math.max(0, sku.overrides?.threePlInventory ?? sku.threePlInventory ?? 0)
-  const inventoryInProduction = Math.max(0, sku.overrides?.inventoryInProduction ?? sku.inventoryInProduction ?? 0)
+  const inventoryInProduction = Math.max(
+    0,
+    sku.overrides?.inventoryInProduction ?? sku.inventoryInProduction ?? 0,
+  )
   const totalAvailableStock = sku.startingStock + threePlInventory
 
   const manualLandingByMonth = Array.from({ length: HORIZON_MONTHS }, () => 0)
-  manualLandingByMonth[0] += sku.inboundPipeline ?? 0
-  if (inventoryInProduction > 0) {
-    const prodLandIndex = Math.min(HORIZON_MONTHS - 1, offset)
-    manualLandingByMonth[prodLandIndex] += inventoryInProduction
-  }
+  // Inbound lands in Month 1 (index 0): pipeline, currentInbound, and units already in production
+  manualLandingByMonth[0] += (sku.currentInbound ?? 0) + (sku.inboundPipeline ?? 0) + inventoryInProduction
+
   for (let i = 0; i < HORIZON_MONTHS; i += 1) {
     const landIndex = i + offset
     if (landIndex < HORIZON_MONTHS) manualLandingByMonth[landIndex] += manualOrders[i]
@@ -115,13 +154,21 @@ export function computeSkuRow(sku: SkuInputs, anchor: Date = DEFAULT_ANCHOR_DATE
     nonzeroForecast.length > 0
       ? nonzeroForecast.reduce((a, b) => a + b, 0) / nonzeroForecast.length
       : 0
-  const targetBufferStock = STOCK_GREEN_FACTOR * avgForecastExclZero * Math.max(0, bufferMonths)
 
   const manualTotalOrders = manualOrders.reduce((a, b) => a + b, 0)
-  const minStock = eom.length > 0 ? Math.min(...eom) : 0
-  const suggestedUnits =
-    minStock < targetBufferStock ? Math.max(0, Math.ceil(targetBufferStock - minStock)) : 0
-  const unitsToOrder = manualTotalOrders > 0 ? manualTotalOrders : suggestedUnits
+  const suggestedOrders = suggestOrders(
+    forecast,
+    bufferMonths,
+    leadTimeDays,
+    totalAvailableStock,
+    manualLandingByMonth[0],
+    manualOrders,
+  )
+  const suggestedOrderUnits = suggestedOrders.reduce(
+    (s, q, m) => s + Math.max(0, q - manualOrders[m]),
+    0,
+  )
+  const unitsToOrder = manualTotalOrders > 0 ? manualTotalOrders : suggestedOrderUnits
 
   let firstRiskMonth: number | null = null
   for (let i = 0; i < HORIZON_MONTHS; i += 1) {

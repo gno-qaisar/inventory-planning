@@ -3,6 +3,7 @@ import {
   buildMonthLabels,
   monthHeader,
   stockTone,
+  priorYearMonthKey,
   MONTH_INDEXES,
   type ComputedSkuRow,
   type ManualOverrides,
@@ -11,13 +12,6 @@ import {
 import { formatInt } from '../domain/format'
 
 const MONTH_LABELS = buildMonthLabels()
-
-function priorYearMonthKey(monthIndex: number): string {
-  const anchor = new Date(2026, 9, 1) // Oct 2026
-  const forecastMonth = new Date(anchor.getFullYear(), anchor.getMonth() + monthIndex, 1)
-  const prior = new Date(forecastMonth.getFullYear() - 1, forecastMonth.getMonth(), 1)
-  return `${prior.getFullYear()}-${String(prior.getMonth() + 1).padStart(2, '0')}`
-}
 
 function getWorstHealth(row: ComputedSkuRow): 'stockoutRisk' | 'belowBuffer' | 'healthy' {
   if (!row || !row.eom || !Array.isArray(row.eom) || row.eom.length === 0) return 'healthy'
@@ -145,7 +139,7 @@ export function AdjustPlanModal({ row, onClose, onOverride }: Props) {
 
   const inboundByMonth = useMemo(() => {
     const landing = Array.from({ length: 8 }, () => 0)
-    landing[0] += row.currentInbound
+    landing[0] += (row.currentInbound || 0) + (row.inventoryInProduction || 0)
     for (let i = 0; i < 8; i++) {
       const landIndex = i + row.landingOffset
       if (landIndex < 8) landing[landIndex] += row.orders[i]

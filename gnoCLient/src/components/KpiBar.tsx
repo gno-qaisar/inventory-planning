@@ -39,12 +39,7 @@ export function KpiBar({ rows, activeFilter, onFilter }: Props) {
       else if (tone === 'yellow') yellow++
       else green++
 
-      const firstRiskMonth = row.eom.findIndex(
-        (v) => stockTone(v, row.avgForecastExclZero, row.bufferMonths) === 'red',
-      )
-      if (firstRiskMonth >= 0 && firstRiskMonth + 1 - row.landingOffset <= 1) {
-        orderNow++
-      } else if (row.orders.reduce((a, b) => a + b, 0) > 0) {
+      if (row.orderBy === 'Now') {
         orderNow++
       }
 

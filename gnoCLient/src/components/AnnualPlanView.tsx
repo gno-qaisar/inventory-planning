@@ -82,7 +82,7 @@ export function AnnualPlanView() {
         cellStyle: centerStyle,
         cellRenderer: (p: ICellRendererParams<ComputedSkuRow>) => {
           if (!p.data) return null
-          if (p.data.sku === 'TOTAL') {
+          if (p.data.sku === '__TOTAL_ROW__') {
             return <strong>All products</strong>
           }
           return (
@@ -104,7 +104,7 @@ export function AnnualPlanView() {
         cellClass: 'mono text-center',
         headerClass: 'text-center',
         cellStyle: centerStyle,
-        valueGetter: (p) => (p.data?.sku === 'TOTAL' ? '' : p.data?.asin || ''),
+        valueGetter: (p) => (p.data?.sku === '__TOTAL_ROW__' ? '' : p.data?.asin || ''),
       },
     ]
 
@@ -116,7 +116,7 @@ export function AnnualPlanView() {
       cellClass: 'text-center',
       cellStyle: centerStyle,
       cellRenderer: (p: ICellRendererParams<ComputedSkuRow>) => {
-        if (p.data?.sku === 'TOTAL') {
+        if (p.data?.sku === '__TOTAL_ROW__') {
           return <StackedPinnedCell {...p} monthIndex={i} />
         }
         return <MatrixMonthCell {...p} monthIndex={i} />
@@ -131,7 +131,7 @@ export function AnnualPlanView() {
       cellClass: 'text-center',
       cellStyle: centerStyle,
       cellRenderer: (p: ICellRendererParams<ComputedSkuRow>) => {
-        if (p.data?.sku === 'TOTAL') {
+        if (p.data?.sku === '__TOTAL_ROW__') {
           return <StackedPinnedCell {...p} isTotal />
         }
         const totalUnits = p.data ? p.data.forecast.reduce((a, b) => a + b, 0) : 0
@@ -148,12 +148,17 @@ export function AnnualPlanView() {
       visibleRows.reduce((sum, r) => sum + (r.forecast[i] || 0), 0),
     )
     const totalStockByMonth = MONTH_INDEXES.map((_, i) =>
-      visibleRows.reduce((sum, r) => sum + (r.eom[i] || 0), 0),
+      visibleRows.reduce((sum, r) => sum + Math.max(0, r.eom[i] || 0), 0),
+    )
+    const totalOrdersByMonth = MONTH_INDEXES.map((_, i) =>
+      visibleRows.reduce((sum, r) => sum + (r.orders[i] || 0), 0),
     )
     const totalUnits = totalFcByMonth.reduce((a, b) => a + b, 0)
+    const totalOrders = totalOrdersByMonth.reduce((a, b) => a + b, 0)
+    const totalSales = visibleRows.reduce((sum, r) => sum + r.totalSales, 0)
 
     const totalRow: ComputedSkuRow = {
-      sku: 'TOTAL',
+      sku: '__TOTAL_ROW__',
       asin: '',
       parentAsin: '',
       title: 'All products',
@@ -162,9 +167,9 @@ export function AnnualPlanView() {
       needsManualInput: false,
       isCritical: false,
       isEdited: false,
-      growthMultiple: 1,
+      growthMultiple: 1.1,
       fallbackUnits: 0,
-      bufferMonths: 0,
+      bufferMonths: 1,
       leadTimeDays: 0,
       landingOffset: 0,
       sellingPrice: 0,
@@ -174,11 +179,11 @@ export function AnnualPlanView() {
       historyNetUnitsByMonth: {},
       forecast: totalFcByMonth,
       eom: totalStockByMonth,
-      orders: totalFcByMonth,
+      orders: totalOrdersByMonth,
       sales: totals.monthlySales,
-      totalSales: totals.projectedSales,
-      totalOrders: totalUnits,
-      unitsToOrder: totalUnits,
+      totalSales,
+      totalOrders,
+      unitsToOrder: totalOrders > 0 ? totalOrders : totalUnits,
       firstRiskMonth: null,
       firstRiskMonthName: '—',
       orderBy: '—',
@@ -210,7 +215,7 @@ export function AnnualPlanView() {
         rowHeight={38}
         animateRows={false}
         enableCellTextSelection
-        getRowClass={(p) => (p.data?.sku === 'TOTAL' ? 'total-row' : undefined)}
+        getRowClass={(p) => (p.data?.sku === '__TOTAL_ROW__' ? 'total-row' : undefined)}
       />
     </div>
   )

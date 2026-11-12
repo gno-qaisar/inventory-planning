@@ -31,7 +31,11 @@ export interface VerificationReport {
 
 @Injectable()
 export class WorkbookService {
-  verifyWorkbook(buffer: Buffer, targetAsin = 'B0F2SN5SL9'): VerificationReport {
+  verifyWorkbook(
+    buffer: Buffer,
+    targetAsin = 'B0F2SN5SL9',
+    anchorDate: Date = new Date(2026, 8, 1),
+  ): VerificationReport {
     if (!buffer || buffer.length === 0) {
       throw new BadRequestException('Empty buffer provided')
     }
@@ -96,8 +100,8 @@ export class WorkbookService {
       }
     }
 
-    // Construct anchor date: Sept 2026 so month 1 is Oct 2026, ...
-    const anchor = new Date(2026, 8, 1)
+    // Use passed anchor date (defaults to Sept 2026 so month 1 is Oct 2026 in worked-example sheet)
+    const anchor = anchorDate
 
     // Build history units keyed by month
     // Oct 2025 -> 2025-10, ..., May 2026 -> 2026-05
