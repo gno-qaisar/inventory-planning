@@ -1,4 +1,5 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm'
+import { numericTransformer } from '../transformers/numeric.transformer'
 
 @Entity('raw_inventory')
 export class RawInventory {
@@ -20,7 +21,7 @@ export class RawInventory {
   @Column({ type: 'varchar', nullable: true })
   title: string | null
 
-  @Column({ type: 'numeric', default: 0 })
+  @Column({ type: 'numeric', default: 0, transformer: numericTransformer })
   velocity: number
 
   @Column({ type: 'int', default: 0 })
@@ -41,4 +42,3 @@ export class RawInventory {
   @Column({ type: 'int', default: 0 })
   fbaFull: number
 }
-

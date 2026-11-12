@@ -11,16 +11,15 @@ import { Session } from './entities/session.entity'
     TypeOrmModule.forRootAsync({
       useFactory: () => ({
         type: 'postgres',
-        url: process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@localhost:5432/gno_forecast',
+        url:
+          process.env.DATABASE_URL ??
+          'postgresql://postgres:postgres@localhost:5432/gno_forecast',
         entities: [Session, RawSale, RawInventory, Override, HistoryLog],
         synchronize: process.env.NODE_ENV !== 'production',
         retryAttempts: 3,
         retryDelay: 3000,
       }),
     }),
-    TypeOrmModule.forFeature([Session, RawSale, RawInventory, Override, HistoryLog]),
   ],
-  exports: [TypeOrmModule],
 })
 export class DbModule {}
-

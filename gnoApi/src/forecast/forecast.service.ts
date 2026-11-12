@@ -1,6 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
-import { InjectRepository } from '@nestjs/typeorm'
-import { Repository } from 'typeorm'
+import { BadRequestException, Injectable, Logger } from '@nestjs/common'
 import * as Papa from 'papaparse'
 import {
   buildMonthLabels,
@@ -12,26 +10,23 @@ import {
   type ComputedSkuRow,
   type InventoryRow,
   type ManualOverrides,
+  type MonthIndex,
   type SalesRow,
   type SkuInputs,
 } from '@gno/shared'
-import { Override } from '../db/entities/override.entity'
-import { RawInventory } from '../db/entities/raw-inventory.entity'
-import { RawSale } from '../db/entities/raw-sales.entity'
-import { Session } from '../db/entities/session.entity'
 import { HistoryService } from '../history/history.service'
+import { OverrideRepository } from './repositories/override.repository'
+import { RawDataRepository } from './repositories/raw-data.repository'
+import { SessionRepository } from './repositories/session.repository'
 
 @Injectable()
 export class ForecastService {
+  private readonly logger = new Logger(ForecastService.name)
+
   constructor(
-    @InjectRepository(Session)
-    private readonly sessionRepo: Repository<Session>,
-    @InjectRepository(RawSale)
-    private readonly rawSaleRepo: Repository<RawSale>,
-    @InjectRepository(RawInventory)
-    private readonly rawInventoryRepo: Repository<RawInventory>,
-    @InjectRepository(Override)
-    private readonly overrideRepo: Repository<Override>,
+    private readonly sessionRepo: SessionRepository,
+    private readonly rawDataRepo: RawDataRepository,
+    private readonly overrideRepo: OverrideRepository,
     private readonly historyService: HistoryService,
   ) {}
 
@@ -39,24 +34,25 @@ export class ForecastService {
     inventorySessionId: string,
     salesSessionId?: string,
   ): Promise<SkuInputs[]> {
+    // Verifies session exists or throws 404
+    await this.sessionRepo.findById(inventorySessionId)
     const sIdSales = salesSessionId || inventorySessionId
+    if (salesSessionId && salesSessionId !== inventorySessionId) {
+      await this.sessionRepo.findById(salesSessionId)
+    }
 
-    const rawSales = await this.rawSaleRepo.find({
-      where: { sessionId: sIdSales },
-    })
-    const rawInventories = await this.rawInventoryRepo.find({
-      where: { sessionId: inventorySessionId },
-    })
+    const rawSales = await this.rawDataRepo.findSales(sIdSales)
+    const rawInventories = await this.rawDataRepo.findInventory(inventorySessionId)
 
     const salesRows: SalesRow[] = rawSales.map((r) => ({
       month: r.month ?? '',
       asin: r.asin ?? '',
       sku: r.sku ?? '',
       parentAsin: r.parentAsin ?? '',
-      unitsOrdered: Number(r.unitsOrdered) || 0,
-      orderedProductSales: Number(r.orderedProductSales) || 0,
-      netUnitsSold: Number(r.netUnitsSold) || 0,
-      netProductSales: Number(r.netProductSales) || 0,
+      unitsOrdered: r.unitsOrdered || 0,
+      orderedProductSales: r.orderedProductSales || 0,
+      netUnitsSold: r.netUnitsSold || 0,
+      netProductSales: r.netProductSales || 0,
       currency: r.currency || 'USD',
     }))
 
@@ -65,48 +61,35 @@ export class ForecastService {
       asin: r.asin ?? '',
       sku: r.sku ?? '',
       title: r.title ?? '',
-      velocity: Number(r.velocity) || 0,
-      fbaActive: Number(r.fbaActive) || 0,
-      fbaReserved: Number(r.fbaReserved) || 0,
-      fbaInbound: Number(r.fbaInbound) || 0,
-      awdTotal: Number(r.awdTotal) || 0,
-      warehouse: Number(r.warehouse) || 0,
-      fbaFull: Number(r.fbaFull) || 0,
+      velocity: r.velocity || 0,
+      fbaActive: r.fbaActive || 0,
+      fbaReserved: r.fbaReserved || 0,
+      fbaInbound: r.fbaInbound || 0,
+      awdTotal: r.awdTotal || 0,
+      warehouse: r.warehouse || 0,
+      fbaFull: r.fbaFull || 0,
     }))
 
     const skus = buildSkuInputs(salesRows, inventoryRows)
 
-    // Load overrides
-    const overrides = await this.overrideRepo.find({
-      where: { sessionId: inventorySessionId },
-    })
+    // Load overrides for this session
+    const overrides = await this.overrideRepo.findBySession(inventorySessionId)
     const overrideMap = new Map(overrides.map((o) => [o.sku, o]))
 
     for (const sku of skus) {
       const ov = overrideMap.get(sku.sku)
       if (ov) {
         sku.overrides = {
-          growthMultiple:
-            ov.growthMultiple !== null ? Number(ov.growthMultiple) : undefined,
-          fallbackUnits:
-            ov.fallbackUnits !== null ? Number(ov.fallbackUnits) : undefined,
-          bufferMonths:
-            ov.bufferMonths !== null ? Number(ov.bufferMonths) : undefined,
-          leadTimeDays:
-            ov.leadTimeDays !== null ? Number(ov.leadTimeDays) : undefined,
-          sellingPrice:
-            ov.sellingPrice !== null ? Number(ov.sellingPrice) : undefined,
-          forecastByMonth: ov.forecastByMonth ?? {},
-          ordersByMonth: ov.ordersByMonth ?? {},
-          multiplesPerMonth: ov.multiplesPerMonth ?? {},
-          threePlInventory:
-            ov.threePlInventory !== null && ov.threePlInventory !== undefined
-              ? Number(ov.threePlInventory)
-              : undefined,
-          inventoryInProduction:
-            ov.inventoryInProduction !== null && ov.inventoryInProduction !== undefined
-              ? Number(ov.inventoryInProduction)
-              : undefined,
+          growthMultiple: ov.growthMultiple ?? undefined,
+          fallbackUnits: ov.fallbackUnits ?? undefined,
+          bufferMonths: ov.bufferMonths ?? undefined,
+          leadTimeDays: ov.leadTimeDays ?? undefined,
+          sellingPrice: ov.sellingPrice ?? undefined,
+          forecastByMonth: (ov.forecastByMonth as Record<MonthIndex, number>) ?? {},
+          ordersByMonth: (ov.ordersByMonth as Record<MonthIndex, number>) ?? {},
+          multiplesPerMonth: (ov.multiplesPerMonth as Record<MonthIndex, number>) ?? {},
+          threePlInventory: ov.threePlInventory ?? undefined,
+          inventoryInProduction: ov.inventoryInProduction ?? undefined,
         }
         sku.inboundPipeline = ov.inboundPipeline ?? 0
       }
@@ -120,12 +103,18 @@ export class ForecastService {
     salesSessionId?: string,
   ): Promise<ComputedSkuRow[]> {
     const skuInputs = await this.loadSkuInputs(inventorySessionId, salesSessionId)
-    const rows = computeAllRows(skuInputs)
+    return computeAllRows(skuInputs)
+  }
 
-    // Also update skuCount on session
-    await this.sessionRepo.update(inventorySessionId, { skuCount: rows.length })
-
-    return rows
+  async createSession(
+    salesSessionId: string,
+    inventorySessionId: string,
+  ): Promise<{ sessionId: string; rows: ComputedSkuRow[] }> {
+    const sessionId = inventorySessionId || salesSessionId
+    const rows = await this.compute(inventorySessionId, salesSessionId)
+    await this.sessionRepo.updateSkuCount(sessionId, rows.length)
+    this.logger.log(`Created forecast session ${sessionId} with ${rows.length} SKUs`)
+    return { sessionId, rows }
   }
 
   async applyOverride(
@@ -133,10 +122,9 @@ export class ForecastService {
     sku: string,
     patch: Partial<ManualOverrides> & { inboundPipeline?: number },
   ): Promise<void> {
-    let override = await this.overrideRepo.findOne({
-      where: { sessionId, sku },
-    })
+    await this.sessionRepo.findById(sessionId)
 
+    let override = await this.overrideRepo.findOne(sessionId, sku)
     if (!override) {
       override = this.overrideRepo.create({
         sessionId,
@@ -154,7 +142,9 @@ export class ForecastService {
     if (patch.sellingPrice !== undefined) override.sellingPrice = patch.sellingPrice
     if (patch.inboundPipeline !== undefined) override.inboundPipeline = patch.inboundPipeline
     if (patch.threePlInventory !== undefined) override.threePlInventory = patch.threePlInventory
-    if (patch.inventoryInProduction !== undefined) override.inventoryInProduction = patch.inventoryInProduction
+    if (patch.inventoryInProduction !== undefined) {
+      override.inventoryInProduction = patch.inventoryInProduction
+    }
 
     if (patch.forecastByMonth) {
       override.forecastByMonth = {
@@ -176,11 +166,7 @@ export class ForecastService {
     }
 
     await this.overrideRepo.save(override)
-
-    await this.historyService.logEvent(sessionId, 'patch_override', {
-      sku,
-      patch,
-    })
+    await this.historyService.logEvent(sessionId, 'patch_override', { sku, patch })
   }
 
   async searchSkus(sessionId: string, query: string): Promise<ComputedSkuRow[]> {
@@ -196,11 +182,14 @@ export class ForecastService {
   }
 
   async exportTabCsv(sessionId: string, tab: AnnualTab): Promise<string> {
-    const session = await this.sessionRepo.findOne({ where: { id: sessionId } })
-    if (!session) {
-      throw new NotFoundException(`Session ${sessionId} not found`)
+    const validTabs: AnnualTab[] = ['forecast', 'eom', 'purchase', 'sales']
+    if (!validTabs.includes(tab)) {
+      throw new BadRequestException(
+        `Invalid tab '${tab}'. Expected one of: ${validTabs.join(', ')}.`,
+      )
     }
 
+    await this.sessionRepo.findById(sessionId)
     const rows = await this.compute(sessionId)
     const labels = buildMonthLabels()
 
@@ -255,10 +244,9 @@ export class ForecastService {
         }))
         break
       default:
-        records = []
+        throw new BadRequestException(`Invalid tab '${tab}'`)
     }
 
     return Papa.unparse(records)
   }
 }
-

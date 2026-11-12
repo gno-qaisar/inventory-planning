@@ -7,6 +7,9 @@ import { Session } from '../db/entities/session.entity'
 import { HistoryModule } from '../history/history.module'
 import { ForecastController } from './forecast.controller'
 import { ForecastService } from './forecast.service'
+import { OverrideRepository } from './repositories/override.repository'
+import { RawDataRepository } from './repositories/raw-data.repository'
+import { SessionRepository } from './repositories/session.repository'
 
 @Module({
   imports: [
@@ -14,8 +17,17 @@ import { ForecastService } from './forecast.service'
     HistoryModule,
   ],
   controllers: [ForecastController],
-  providers: [ForecastService],
-  exports: [ForecastService],
+  providers: [
+    SessionRepository,
+    OverrideRepository,
+    RawDataRepository,
+    ForecastService,
+  ],
+  exports: [
+    SessionRepository,
+    OverrideRepository,
+    RawDataRepository,
+    ForecastService,
+  ],
 })
 export class ForecastModule {}
-

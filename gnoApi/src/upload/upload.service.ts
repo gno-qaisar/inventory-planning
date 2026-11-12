@@ -1,6 +1,6 @@
-import { BadRequestException, Injectable } from '@nestjs/common'
+import { BadRequestException, Injectable, Logger } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
-import { Repository } from 'typeorm'
+import { DataSource, Repository } from 'typeorm'
 import { v4 as uuidv4 } from 'uuid'
 import * as Papa from 'papaparse'
 import * as XLSX from 'xlsx'
@@ -18,7 +18,10 @@ import { HistoryService } from '../history/history.service'
 
 @Injectable()
 export class UploadService {
+  private readonly logger = new Logger(UploadService.name)
+
   constructor(
+    private readonly dataSource: DataSource,
     @InjectRepository(Session)
     private readonly sessionRepo: Repository<Session>,
     @InjectRepository(RawSale)
@@ -76,12 +79,13 @@ export class UploadService {
         }),
       )
 
-      // Clear previous sales for this session if re-uploading
-      await this.rawSaleRepo.delete({ sessionId: session.id })
-      await this.rawSaleRepo.save(rawSales, { chunk: 500 })
-
-      session.salesFileName = file.originalname
-      await this.sessionRepo.save(session)
+      // Transactional delete and chunked save
+      await this.dataSource.transaction(async (manager) => {
+        await manager.delete(RawSale, { sessionId: session!.id })
+        await manager.save(RawSale, rawSales, { chunk: 500 })
+        session!.salesFileName = file.originalname
+        await manager.save(Session, session!)
+      })
 
       await this.historyService.logEvent(session.id, 'upload_sales_csv', {
         fileName: file.originalname,
@@ -108,24 +112,23 @@ export class UploadService {
         }),
       )
 
-      await this.rawInventoryRepo.delete({ sessionId: session.id })
-      await this.rawInventoryRepo.save(rawInvs, { chunk: 500 })
-
-      session.inventoryFileName = file.originalname
-      session.skuCount = rowCount
-      await this.sessionRepo.save(session)
+      // Transactional delete and chunked save
+      await this.dataSource.transaction(async (manager) => {
+        await manager.delete(RawInventory, { sessionId: session!.id })
+        await manager.save(RawInventory, rawInvs, { chunk: 500 })
+        session!.inventoryFileName = file.originalname
+        session!.skuCount = rowCount
+        await manager.save(Session, session!)
+      })
 
       await this.historyService.logEvent(session.id, 'upload_inventory_csv', {
         fileName: file.originalname,
         rowCount,
         issues,
       })
-    } else {
-      await this.historyService.logEvent(session.id, 'upload_unknown_csv', {
-        fileName: file.originalname,
-        headers,
-      })
     }
+
+    this.logger.log(`Processed ${kind} upload for session ${session.id}: ${rowCount} rows`)
 
     return {
       sessionId: session.id,
@@ -138,48 +141,38 @@ export class UploadService {
 
   async handleXlsxUpload(file: Express.Multer.File, requestedSessionId?: string) {
     if (!file || !file.buffer) {
-      throw new BadRequestException('No file provided')
+      throw new BadRequestException('No workbook file provided')
+    }
+
+    const sessionId = requestedSessionId || uuidv4()
+    let session = await this.sessionRepo.findOne({ where: { id: sessionId } })
+    if (!session) {
+      session = this.sessionRepo.create({ id: sessionId, skuCount: 0 })
+      await this.sessionRepo.save(session)
     }
 
     const workbook = XLSX.read(file.buffer, { type: 'buffer' })
-    const sheets = workbook.SheetNames
+    const sheetNames = workbook.SheetNames
+    const summaries: Record<string, number> = {}
 
-    let session: Session | null = null
-    if (requestedSessionId) {
-      session = await this.sessionRepo.findOne({ where: { id: requestedSessionId } })
-    }
-    if (!session) {
-      session = this.sessionRepo.create({
-        id: requestedSessionId || uuidv4(),
-        skuCount: 0,
-      })
-    }
-    session.xlsxFileName = file.originalname
-    session = await this.sessionRepo.save(session)
-
-    const summaries: Record<string, { rowCount: number; headers: string[] }> = {}
-    for (const sheetName of ['ASIN View', 'Annual plan', 'SellerBoard data', 'Sellerboard Inventory']) {
-      if (workbook.Sheets[sheetName]) {
-        const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[sheetName], {
-          header: 1,
-        })
-        const headers = Array.isArray(json[0]) ? (json[0] as unknown[]).map(String) : []
-        summaries[sheetName] = {
-          rowCount: Math.max(0, json.length - 1),
-          headers,
-        }
-      }
+    for (const name of sheetNames) {
+      const sheet = workbook.Sheets[name]
+      const json = XLSX.utils.sheet_to_json(sheet)
+      summaries[name] = json.length
     }
 
-    await this.historyService.logEvent(session.id, 'upload_xlsx', {
+    session.inventoryFileName = file.originalname
+    await this.sessionRepo.save(session)
+
+    await this.historyService.logEvent(sessionId, 'upload_workbook', {
       fileName: file.originalname,
-      sheets,
+      sheets: sheetNames,
       summaries,
     })
 
     return {
-      sessionId: session.id,
-      sheets,
+      sessionId,
+      sheets: sheetNames,
       summaries,
     }
   }
@@ -192,4 +185,3 @@ export class UploadService {
     })
   }
 }
-

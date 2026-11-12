@@ -1,4 +1,5 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm'
+import { numericTransformer } from '../transformers/numeric.transformer'
 
 @Entity('raw_sales')
 export class RawSale {
@@ -23,16 +24,15 @@ export class RawSale {
   @Column({ type: 'int', default: 0 })
   unitsOrdered: number
 
-  @Column({ type: 'numeric', default: 0 })
+  @Column({ type: 'numeric', default: 0, transformer: numericTransformer })
   orderedProductSales: number
 
   @Column({ type: 'int', default: 0 })
   netUnitsSold: number
 
-  @Column({ type: 'numeric', default: 0 })
+  @Column({ type: 'numeric', default: 0, transformer: numericTransformer })
   netProductSales: number
 
   @Column({ type: 'varchar', default: 'USD' })
   currency: string
 }
-
