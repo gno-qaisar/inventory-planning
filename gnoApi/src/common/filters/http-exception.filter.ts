@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common'
+import * as crypto from 'crypto'
 import type { Request, Response } from 'express'
 
 @Catch()
@@ -16,6 +17,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp()
     const response = ctx.getResponse<Response>()
     const request = ctx.getRequest<Request>()
+
+    const correlationId =
+      (request.headers['x-correlation-id'] as string) ||
+      (request.headers['x-request-id'] as string) ||
+      crypto.randomUUID()
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR
     let message: string | string[] = 'Internal server error'
@@ -33,7 +39,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       }
     } else if (exception instanceof Error) {
       this.logger.error(
-        `Unhandled error on ${request.method} ${request.url}: ${exception.message}`,
+        `[${correlationId}] Unhandled error on ${request.method} ${request.url}: ${exception.message}`,
         exception.stack,
       )
     }
@@ -42,6 +48,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       statusCode: status,
       error,
       message,
+      correlationId,
       timestamp: new Date().toISOString(),
       path: request.url,
     })

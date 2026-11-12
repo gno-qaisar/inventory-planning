@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { parseCsvFile } from '../csv/parse'
 import { validateUploadPair } from '@gno/shared'
 import type { ParsedCsvFile } from '@gno/shared'
 import { DropZone } from './DropZone'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 import {
   useUploadCsvMutation,
   useUploadXlsxMutation,
@@ -18,6 +19,8 @@ import {
 export function UploadModal() {
   const uploadOpen = useAppSelector((s) => s.workspace.uploadOpen)
   const dispatch = useAppDispatch()
+  const modalRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(modalRef, uploadOpen)
 
   const [sales, setSales] = useState<ParsedCsvFile | null>(null)
   const [inventory, setInventory] = useState<ParsedCsvFile | null>(null)
@@ -164,6 +167,7 @@ export function UploadModal() {
   return (
     <div className="modal-backdrop" role="presentation" onClick={handleClose}>
       <div
+        ref={modalRef}
         className="modal"
         role="dialog"
         aria-modal="true"

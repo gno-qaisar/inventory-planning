@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   buildMonthLabels,
   monthHeader,
@@ -15,6 +15,7 @@ import {
   type MonthIndex,
 } from '@gno/shared'
 import { formatInt } from '../domain/format'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 
 const MONTH_LABELS = buildMonthLabels()
 
@@ -25,6 +26,9 @@ interface Props {
 }
 
 export function AdjustPlanModal({ row, onClose, onOverride }: Props) {
+  const drawerRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(drawerRef, true)
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -162,7 +166,7 @@ export function AdjustPlanModal({ row, onClose, onOverride }: Props) {
   return (
     <>
       <div className="overlay" onClick={onClose} role="presentation" />
-      <div className="drawer open" role="dialog" aria-modal="true" aria-label="Adjust Plan">
+      <div ref={drawerRef} className="drawer open" role="dialog" aria-modal="true" aria-label="Adjust Plan">
         <div className="drawer-head">
           <button className="drawer-close" onClick={onClose} type="button" aria-label="Close drawer">
             ×

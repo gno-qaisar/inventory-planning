@@ -15,7 +15,7 @@ export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 
   @Post('csv')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 25 * 1024 * 1024 } }))
   async uploadCsv(
     @UploadedFile() file: Express.Multer.File,
     @Body('sessionId') sessionId?: string,
@@ -25,7 +25,7 @@ export class UploadController {
   }
 
   @Post('xlsx')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 25 * 1024 * 1024 } }))
   async uploadXlsx(
     @UploadedFile() file: Express.Multer.File,
     @Body('sessionId') sessionId?: string,

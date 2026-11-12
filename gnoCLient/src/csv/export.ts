@@ -3,7 +3,7 @@ import type { AnnualTab, ComputedSkuRow } from '@gno/shared'
 import { MONTH_INDEXES, monthHeader } from '@gno/shared'
 
 function downloadCsv(filename: string, rows: Record<string, string | number>[]): void {
-  const csv = Papa.unparse(rows)
+  const csv = Papa.unparse(rows, { escapeFormulae: true })
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
