@@ -5,6 +5,10 @@ import {
   stockTone,
   priorYearMonthKey,
   getWorstHealth,
+  suggestOrders,
+  DEFAULT_GROWTH_MULTIPLE,
+  DEFAULT_LEAD_TIME_DAYS,
+  DEFAULT_BUFFER_MONTHS,
   MONTH_INDEXES,
   type ComputedSkuRow,
   type ManualOverrides,
@@ -88,23 +92,16 @@ export function AdjustPlanModal({ row, onClose, onOverride }: Props) {
   }
 
   const handleSuggestOrders = () => {
-    const shift = Math.round(Number(localLeadTime) / 30) || 3
-    const forecasts = row.forecast
-    const threshold = 0.25 * row.avgForecastExclZero * Number(localBuffer)
-    const orders = [...row.orders]
     const starting = row.startingStock + (row.threePlInventory ?? 0)
-
-    for (let month = shift; month < 8; month++) {
-      let ending = starting
-      for (let m = 0; m <= month; m++) {
-        const arriving = (m === 0 ? row.currentInbound : 0) + (m >= shift ? orders[m - shift] : 0)
-        ending += arriving - forecasts[m]
-      }
-      const missing = Math.ceil(threshold) + 1 - ending
-      if (missing > 0) {
-        orders[month - shift] += missing
-      }
-    }
+    const currentInbound = (row.currentInbound || 0) + (row.inventoryInProduction || 0)
+    const orders = suggestOrders(
+      row.forecast,
+      Number(localBuffer) || DEFAULT_BUFFER_MONTHS,
+      Number(localLeadTime) || DEFAULT_LEAD_TIME_DAYS,
+      starting,
+      currentInbound,
+      Array(8).fill(0),
+    )
 
     const newOrdersMap: Partial<Record<MonthIndex, number>> = {}
     MONTH_INDEXES.forEach((m, idx) => {
@@ -119,21 +116,21 @@ export function AdjustPlanModal({ row, onClose, onOverride }: Props) {
     const clearedMultiples: Partial<Record<MonthIndex, number>> = {}
     const clearedOrders: Partial<Record<MonthIndex, number>> = {}
     for (const m of MONTH_INDEXES) {
-      clearedMultiples[m] = 1.1
+      clearedMultiples[m] = DEFAULT_GROWTH_MULTIPLE
       clearedOrders[m] = 0
     }
-    setLocalLeadTime('90')
-    setLocalBuffer('1')
+    setLocalLeadTime(String(DEFAULT_LEAD_TIME_DAYS))
+    setLocalBuffer(String(DEFAULT_BUFFER_MONTHS))
     setLocalMultiples(
-      Object.fromEntries(MONTH_INDEXES.map((m) => [m, '1.1'])),
+      Object.fromEntries(MONTH_INDEXES.map((m) => [m, String(DEFAULT_GROWTH_MULTIPLE)])),
     )
     setLocalOrders(
       Object.fromEntries(MONTH_INDEXES.map((m) => [m, '0'])),
     )
     onOverride(row.sku, {
-      leadTimeDays: 90,
-      bufferMonths: 1,
-      growthMultiple: 1.1,
+      leadTimeDays: DEFAULT_LEAD_TIME_DAYS,
+      bufferMonths: DEFAULT_BUFFER_MONTHS,
+      growthMultiple: DEFAULT_GROWTH_MULTIPLE,
       multiplesPerMonth: clearedMultiples,
       ordersByMonth: clearedOrders,
     })
