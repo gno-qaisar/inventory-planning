@@ -4,35 +4,35 @@ import { numericTransformer } from '../transformers/numeric.transformer'
 @Entity('raw_sales')
 export class RawSale {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
-  id: number
+  id!: number
 
   @Column({ type: 'varchar' })
-  sessionId: string
+  sessionId!: string
 
   @Column({ type: 'varchar', nullable: true })
-  month: string | null
+  month?: string | null
 
   @Column({ type: 'varchar', nullable: true })
-  asin: string | null
+  asin?: string | null
 
   @Column({ type: 'varchar', nullable: true })
-  sku: string | null
+  sku?: string | null
 
   @Column({ type: 'varchar', nullable: true })
-  parentAsin: string | null
+  parentAsin?: string | null
 
   @Column({ type: 'int', default: 0 })
-  unitsOrdered: number
+  unitsOrdered!: number
 
   @Column({ type: 'numeric', default: 0, transformer: numericTransformer })
-  orderedProductSales: number
+  orderedProductSales!: number
 
   @Column({ type: 'int', default: 0 })
-  netUnitsSold: number
+  netUnitsSold!: number
 
   @Column({ type: 'numeric', default: 0, transformer: numericTransformer })
-  netProductSales: number
+  netProductSales!: number
 
   @Column({ type: 'varchar', default: 'USD' })
-  currency: string
+  currency!: string
 }

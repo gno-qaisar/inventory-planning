@@ -66,9 +66,9 @@ export class OverridePatchDto {
 export class PatchOverrideDto {
   @IsString()
   @IsNotEmpty()
-  sku: string
+  sku!: string
 
   @ValidateNested()
   @Type(() => OverridePatchDto)
-  patch: OverridePatchDto
+  patch!: OverridePatchDto
 }

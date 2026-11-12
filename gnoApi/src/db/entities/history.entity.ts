@@ -3,18 +3,17 @@ import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeor
 @Entity('history')
 export class HistoryLog {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
-  id: number
+  id!: number
 
   @Column({ type: 'varchar', nullable: true })
-  sessionId: string | null
+  sessionId?: string | null
 
   @Column({ type: 'varchar' })
-  eventType: string
+  eventType!: string
 
   @Column({ type: 'jsonb', default: '{}' })
-  payload: Record<string, unknown>
+  payload!: Record<string, unknown>
 
   @CreateDateColumn()
-  createdAt: Date
+  createdAt!: Date
 }
-

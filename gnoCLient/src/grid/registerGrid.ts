@@ -1,9 +1,9 @@
-import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
+import { ClientSideRowModelModule, ModuleRegistry } from 'ag-grid-community'
 
 let registered = false
 
 export function registerGridModules(): void {
   if (registered) return
-  ModuleRegistry.registerModules([AllCommunityModule])
+  ModuleRegistry.registerModules([ClientSideRowModelModule])
   registered = true
 }

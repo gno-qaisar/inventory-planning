@@ -5,47 +5,47 @@ import { numericTransformer } from '../transformers/numeric.transformer'
 @Unique(['sessionId', 'sku'])
 export class Override {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
-  id: number
+  id!: number
 
   @Column({ type: 'varchar' })
-  sessionId: string
+  sessionId!: string
 
   @Column({ type: 'varchar' })
-  sku: string
+  sku!: string
 
   @Column({ type: 'numeric', nullable: true, transformer: numericTransformer })
-  growthMultiple: number | null
+  growthMultiple?: number | null
 
   @Column({ type: 'numeric', nullable: true, transformer: numericTransformer })
-  fallbackUnits: number | null
+  fallbackUnits?: number | null
 
   @Column({ type: 'numeric', nullable: true, transformer: numericTransformer })
-  bufferMonths: number | null
+  bufferMonths?: number | null
 
   @Column({ type: 'numeric', nullable: true, transformer: numericTransformer })
-  leadTimeDays: number | null
+  leadTimeDays?: number | null
 
   @Column({ type: 'numeric', nullable: true, transformer: numericTransformer })
-  sellingPrice: number | null
+  sellingPrice?: number | null
 
   @Column({ type: 'jsonb', default: '{}' })
-  forecastByMonth: Record<string, number>
+  forecastByMonth!: Record<string, number>
 
   @Column({ type: 'jsonb', default: '{}' })
-  ordersByMonth: Record<string, number>
+  ordersByMonth!: Record<string, number>
 
   @Column({ type: 'jsonb', default: '{}' })
-  multiplesPerMonth: Record<string, number>
+  multiplesPerMonth!: Record<string, number>
 
   @Column({ type: 'int', default: 0 })
-  inboundPipeline: number
+  inboundPipeline!: number
 
   @Column({ type: 'numeric', nullable: true, transformer: numericTransformer })
-  threePlInventory: number | null
+  threePlInventory?: number | null
 
   @Column({ type: 'numeric', nullable: true, transformer: numericTransformer })
-  inventoryInProduction: number | null
+  inventoryInProduction?: number | null
 
   @UpdateDateColumn()
-  updatedAt: Date
+  updatedAt!: Date
 }

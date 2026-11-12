@@ -3,24 +3,23 @@ import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeor
 @Entity('sessions')
 export class Session {
   @PrimaryGeneratedColumn('uuid')
-  id: string
+  id!: string
 
   @CreateDateColumn()
-  createdAt: Date
+  createdAt!: Date
 
   @Column({ type: 'varchar', nullable: true })
-  salesFileName: string | null
+  salesFileName?: string | null
 
   @Column({ type: 'varchar', nullable: true })
-  inventoryFileName: string | null
+  inventoryFileName?: string | null
 
   @Column({ type: 'varchar', nullable: true })
-  xlsxFileName: string | null
+  xlsxFileName?: string | null
 
   @Column({ type: 'int', default: 0 })
-  skuCount: number
+  skuCount!: number
 
   @Column({ type: 'text', nullable: true })
-  notes: string | null
+  notes?: string | null
 }
-

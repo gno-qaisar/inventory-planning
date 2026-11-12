@@ -65,7 +65,7 @@ export interface FileFingerprint {
 }
 
 export interface ParsedCsvFile {
-  file: any
+  file: unknown
   fingerprint: FileFingerprint
   headers: string[]
   kind: CsvKind
@@ -189,19 +189,8 @@ export interface SessionDto {
   notes?: string | null
 }
 
-export interface OverridePatch {
-  sessionId: string
-  sku: string
-  patch: Partial<ManualOverrides>
-}
-
-export interface ComputeRequest {
-  sessionId: string
-}
-
 export interface RecalcResponse {
   rows: ComputedSkuRow[]
-  dirtyFlag: false
   recalculatedAt?: string
 }
 
@@ -216,6 +205,7 @@ export interface UploadCsvResponse {
 export interface UploadXlsxResponse {
   sessionId: string
   sheets: string[]
+  summaries: Record<string, number>
   asinCount?: number
   message?: string
 }
