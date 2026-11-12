@@ -6,8 +6,13 @@ settings:
 
 importers:
 
+  .: {}
+
   gnoApi:
     dependencies:
+      '@gno/shared':
+        specifier: workspace:*
+        version: link:../packages/shared
       '@nestjs/common':
         specifier: ^11.0.1
         version: 11.2.9(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -141,6 +146,9 @@ importers:
 
   gnoCLient:
     dependencies:
+      '@gno/shared':
+        specifier: workspace:*
+        version: link:../packages/shared
       '@reduxjs/toolkit':
         specifier: ^2.13.0
         version: 2.14.0(@types/react@19.3.0)(react-redux@9.3.1(@types/react@19.3.0)(react@19.3.1)(redux@5.0.1))(react@19.3.1)
