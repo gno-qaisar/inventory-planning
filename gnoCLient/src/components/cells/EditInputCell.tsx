@@ -38,7 +38,10 @@ export function EditInputCell({ data, field, onSave }: EditInputCellProps) {
       className="edit-input"
       value={val}
       aria-label={`${field === 'threePlInventory' ? '3PL' : 'In production'} for ${data.title || data.sku}`}
+      onMouseDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
+      onFocus={(e) => e.currentTarget.select()}
       onChange={(e) => setVal(e.target.value)}
       onBlur={commitChange}
       onKeyDown={(e) => {

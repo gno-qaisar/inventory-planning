@@ -46,3 +46,4 @@ export function useFocusTrap(ref: RefObject<HTMLElement | null>, active: boolean
     }
   }, [ref, active])
 }
+

@@ -147,6 +147,7 @@ export function AnnualPlanView() {
         rowHeight={38}
         animateRows={false}
         enableCellTextSelection
+        suppressCellFocus={true}
         tooltipShowMode="whenTruncated"
         tooltipShowDelay={500}
         getRowClass={(p) => (p.data?.sku === '__TOTAL_ROW__' ? 'total-row' : undefined)}

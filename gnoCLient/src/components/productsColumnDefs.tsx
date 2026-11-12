@@ -64,7 +64,8 @@ export function buildProductsColumnDefs(
     {
       headerName: '8-month outlook',
       colId: 'outlook',
-      width: 130,
+      width: 145,
+      minWidth: 135,
       sortable: false,
       headerClass: 'text-center',
       cellClass: 'text-center',
@@ -95,6 +96,7 @@ export function buildProductsColumnDefs(
         field: 'threePlInventory',
         onSave: onSaveOverride,
       },
+      suppressKeyboardEvent: (params) => params.event.target instanceof HTMLInputElement,
     },
     {
       headerName: 'In production',
@@ -110,6 +112,7 @@ export function buildProductsColumnDefs(
         field: 'inventoryInProduction',
         onSave: onSaveOverride,
       },
+      suppressKeyboardEvent: (params) => params.event.target instanceof HTMLInputElement,
     },
     {
       headerName: 'Forecast units',
