@@ -13,7 +13,6 @@ export interface WorkspaceState {
   view: WorkspaceView
   eomHealthFilter: EomHealthFilter
   search: string
-  selectedSku: string | null
 }
 
 const savedSessionId =
@@ -28,7 +27,6 @@ export const initialWorkspaceState: WorkspaceState = {
   view: 'products',
   eomHealthFilter: 'all',
   search: '',
-  selectedSku: null,
 }
 
 export const workspaceSlice = createSlice({
@@ -82,9 +80,6 @@ export const workspaceSlice = createSlice({
     setSearch: (state, action: PayloadAction<string>) => {
       state.search = action.payload
     },
-    selectSku: (state, action: PayloadAction<string | null>) => {
-      state.selectedSku = action.payload
-    },
   },
 })
 
@@ -99,7 +94,6 @@ export const {
   setView,
   setEomHealthFilter,
   setSearch,
-  selectSku,
 } = workspaceSlice.actions
 
 export const selectWorkspace = (state: RootState) => state.workspace

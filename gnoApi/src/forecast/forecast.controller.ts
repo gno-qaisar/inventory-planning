@@ -6,11 +6,8 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
-  Query,
-  Res,
 } from '@nestjs/common'
-import type { Response } from 'express'
-import type { AnnualTab, ComputedSkuRow } from '@gno/shared'
+import type { ComputedSkuRow } from '@gno/shared'
 import { CreateSessionDto } from './dto/create-session.dto'
 import { PatchOverrideDto } from './dto/patch-override.dto'
 import { ForecastService } from './forecast.service'
@@ -47,14 +44,6 @@ export class ForecastController {
     return { rows, recalculatedAt: new Date().toISOString() }
   }
 
-  @Get(':id/search')
-  async searchSkus(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Query('q') q: string,
-  ): Promise<ComputedSkuRow[]> {
-    return this.forecastService.searchSkus(id, q ?? '')
-  }
-
   @Post(':id/recalculate')
   async recalculate(
     @Param('id', new ParseUUIDPipe()) id: string,
@@ -64,18 +53,5 @@ export class ForecastController {
       rows,
       recalculatedAt: new Date().toISOString(),
     }
-  }
-
-  @Get(':id/export/:tab')
-  async exportTab(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Param('tab') tab: AnnualTab,
-    @Res() res: Response,
-  ): Promise<void> {
-    const csv = await this.forecastService.exportTabCsv(id, tab)
-    const filename = `${tab}-plan.csv`
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8')
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
-    res.send(csv)
   }
 }

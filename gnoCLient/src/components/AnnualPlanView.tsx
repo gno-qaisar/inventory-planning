@@ -1,71 +1,19 @@
 import { useMemo } from 'react'
 import { AgGridReact } from 'ag-grid-react'
-import type { CellStyle, ColDef, ICellRendererParams } from 'ag-grid-community'
+import type { ColDef, ICellRendererParams } from 'ag-grid-community'
 import {
   buildMonthLabels,
   monthHeader,
-  stockTone,
   MONTH_INDEXES,
   type ComputedSkuRow,
 } from '@gno/shared'
 import { formatInt } from '../domain/format'
 import { gridTheme } from '../grid/theme'
+import { centerStyle, defaultColDef } from '../grid/gridDefaults'
 import { useForecastData } from '../store/useForecastData'
+import { MatrixMonthCell, StackedPinnedCell } from './cells/AnnualPlanCells'
 
 const MONTH_LABELS = buildMonthLabels()
-
-const centerStyle: CellStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  textAlign: 'center',
-}
-
-// Matrix month cell matching prototype:
-// <span class="annual-cell"><span class="sold">123</span><span class="left healthy">456</span></span>
-interface MonthCellProps extends ICellRendererParams<ComputedSkuRow> {
-  monthIndex: number
-}
-
-function MatrixMonthCell({ data, monthIndex }: MonthCellProps) {
-  if (!data) return null
-  const forecastUnits = data.forecast?.[monthIndex] ?? 0
-  const stockLeft = data.eom?.[monthIndex] ?? 0
-  const tone = stockTone(stockLeft, data.avgForecastExclZero, data.bufferMonths)
-  const health = tone === 'red' ? 'stockoutRisk' : tone === 'yellow' ? 'belowBuffer' : 'healthy'
-
-  return (
-    <span className="annual-cell">
-      <span className="sold">{formatInt(forecastUnits)}</span>
-      <span className={`left ${health}`}>{formatInt(stockLeft)}</span>
-    </span>
-  )
-}
-
-// "All products" bottom pinned row cells matching prototype
-interface PinnedCellProps extends ICellRendererParams<ComputedSkuRow> {
-  monthIndex?: number
-  isTotal?: boolean
-}
-
-function StackedPinnedCell({ data, monthIndex, isTotal }: PinnedCellProps) {
-  if (!data) return null
-  if (isTotal) {
-    const totalFc = data.forecast?.reduce((a, b) => a + b, 0) || 0
-    return <span style={{ fontWeight: 600, textAlign: 'center', width: '100%' }}>{formatInt(totalFc)}</span>
-  }
-
-  const idx = monthIndex ?? 0
-  const fcUnits = data.forecast?.[idx] ?? 0
-  const stockUnits = data.eom?.[idx] ?? 0
-
-  return (
-    <span className="annual-cell">
-      <span className="sold">{formatInt(fcUnits)}</span>
-      <span className="left" style={{ color: 'var(--gray-700)' }}>{formatInt(stockUnits)}</span>
-    </span>
-  )
-}
 
 export function AnnualPlanView() {
   const { visibleRows, totals } = useForecastData()
@@ -193,15 +141,6 @@ export function AnnualPlanView() {
     return [totalRow]
   }, [visibleRows, totals])
 
-  const defaultColDef = useMemo<ColDef<ComputedSkuRow>>(() => ({
-    resizable: true,
-    sortable: true,
-    suppressHeaderMenuButton: true,
-    headerClass: 'text-center',
-    cellClass: 'text-center',
-    cellStyle: centerStyle,
-  }), [])
-
   return (
     <div style={{ flex: 1, height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       <AgGridReact<ComputedSkuRow>
@@ -215,6 +154,7 @@ export function AnnualPlanView() {
         rowHeight={38}
         animateRows={false}
         enableCellTextSelection
+        tooltipShowMode="whenTruncated"
         getRowClass={(p) => (p.data?.sku === '__TOTAL_ROW__' ? 'total-row' : undefined)}
       />
     </div>

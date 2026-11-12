@@ -4,6 +4,7 @@ import {
   monthHeader,
   stockTone,
   priorYearMonthKey,
+  getWorstHealth,
   MONTH_INDEXES,
   type ComputedSkuRow,
   type ManualOverrides,
@@ -13,14 +14,6 @@ import { formatInt } from '../domain/format'
 
 const MONTH_LABELS = buildMonthLabels()
 
-function getWorstHealth(row: ComputedSkuRow): 'stockoutRisk' | 'belowBuffer' | 'healthy' {
-  if (!row || !row.eom || !Array.isArray(row.eom) || row.eom.length === 0) return 'healthy'
-  const tones = row.eom.map((v) => stockTone(v, row.avgForecastExclZero, row.bufferMonths))
-  if (tones.some((t) => t === 'red')) return 'stockoutRisk'
-  if (tones.some((t) => t === 'yellow')) return 'belowBuffer'
-  return 'healthy'
-}
-
 interface Props {
   row: ComputedSkuRow
   onClose: () => void
@@ -28,6 +21,15 @@ interface Props {
 }
 
 export function AdjustPlanModal({ row, onClose, onOverride }: Props) {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
   const [localLeadTime, setLocalLeadTime] = useState(String(row.leadTimeDays))
   const [localBuffer, setLocalBuffer] = useState(String(row.bufferMonths))
 
@@ -163,9 +165,9 @@ export function AdjustPlanModal({ row, onClose, onOverride }: Props) {
   return (
     <>
       <div className="overlay" onClick={onClose} role="presentation" />
-      <div className="drawer open" role="dialog" aria-label="Adjust Plan">
+      <div className="drawer open" role="dialog" aria-modal="true" aria-label="Adjust Plan">
         <div className="drawer-head">
-          <button className="drawer-close" onClick={onClose} type="button">
+          <button className="drawer-close" onClick={onClose} type="button" aria-label="Close drawer">
             ×
           </button>
           <h2>{row.title || row.sku}</h2>

@@ -7,7 +7,7 @@ import {
   STOCK_GREEN_FACTOR,
 } from './constants'
 import { buildMonthLabels, monthHeader } from './monthLabels'
-import type { ComputedSkuRow, MonthIndex, SkuInputs } from './types'
+import type { ComputedSkuRow, MonthIndex, SkuInputs, SkuHealth, SkuTone } from './types'
 import { HORIZON_MONTHS, MONTH_INDEXES } from './types'
 
 export { DEFAULT_ANCHOR_DATE }
@@ -25,6 +25,27 @@ export function stockTone(
   const threshold = STOCK_GREEN_FACTOR * avgMonthlyForecast * bufferMonths
   if (eom > threshold) return 'green'
   return 'yellow'
+}
+
+export function getWorstHealth(row: ComputedSkuRow): SkuHealth {
+  if (!row || !row.eom || !Array.isArray(row.eom) || row.eom.length === 0) return 'healthy'
+  const tones = row.eom.map((v) => stockTone(v, row.avgForecastExclZero, row.bufferMonths))
+  if (tones.some((t) => t === 'red')) return 'stockoutRisk'
+  if (tones.some((t) => t === 'yellow')) return 'belowBuffer'
+  return 'healthy'
+}
+
+export function getWorstTone(row: ComputedSkuRow): SkuTone {
+  const h = getWorstHealth(row)
+  if (h === 'stockoutRisk') return 'red'
+  if (h === 'belowBuffer') return 'yellow'
+  return 'green'
+}
+
+export const HEALTH_LABEL: Record<SkuHealth, string> = {
+  stockoutRisk: 'Stockout risk',
+  belowBuffer: 'Below buffer',
+  healthy: 'Healthy',
 }
 
 function resolvedInputs(sku: SkuInputs) {

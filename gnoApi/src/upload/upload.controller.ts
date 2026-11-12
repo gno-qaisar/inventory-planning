@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  Get,
   Post,
   Query,
   UploadedFile,
@@ -32,16 +31,6 @@ export class UploadController {
     @Query('sessionId') querySessionId?: string,
   ) {
     return this.uploadService.handleXlsxUpload(file, sessionId || querySessionId)
-  }
-
-  @Get('history')
-  async getHistory(
-    @Query('limit') limit?: string,
-    @Query('offset') offset?: string,
-  ) {
-    const l = limit ? Math.max(1, parseInt(limit, 10)) : 50
-    const o = offset ? Math.max(0, parseInt(offset, 10)) : 0
-    return this.uploadService.getSessions(l, o)
   }
 }
 

@@ -65,7 +65,7 @@ export interface FileFingerprint {
 }
 
 export interface ParsedCsvFile {
-  file: unknown
+  file: File | null
   fingerprint: FileFingerprint
   headers: string[]
   kind: CsvKind
@@ -93,15 +93,10 @@ export interface UploadValidation {
   summary: JoinSummary | null
 }
 
-export type WorkspaceView =
-  | 'products'
-  | 'annual'
-  | 'asin'
-  | 'sellerboard'
-  | 'sellerboard-inventory'
-  | 'history'
+export type WorkspaceView = 'products' | 'annual'
 export type AnnualTab = 'forecast' | 'eom' | 'purchase' | 'sales'
-export type SkuFilter = 'all' | 'critical' | 'needsInput'
+export type SkuHealth = 'stockoutRisk' | 'belowBuffer' | 'healthy'
+export type SkuTone = 'red' | 'yellow' | 'green'
 
 export interface ManualOverrides {
   growthMultiple?: number

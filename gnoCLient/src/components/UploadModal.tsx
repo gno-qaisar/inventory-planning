@@ -42,8 +42,27 @@ export function UploadModal() {
   const validation = useMemo(() => validateUploadPair(sales, inventory), [sales, inventory])
 
   useEffect(() => {
-    dispatch(setValidationFailed(validation.issues.length > 0))
-  }, [validation.issues, dispatch])
+    dispatch(setValidationFailed(validation.issues.length > 0 || !!parseError))
+    return () => {
+      dispatch(setValidationFailed(false))
+    }
+  }, [validation.issues, parseError, dispatch])
+
+  const handleClose = () => {
+    dispatch(setValidationFailed(false))
+    dispatch(closeUpload())
+  }
+
+  useEffect(() => {
+    if (!uploadOpen) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleClose()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [uploadOpen])
 
   if (!uploadOpen) return null
 
@@ -142,13 +161,12 @@ export function UploadModal() {
 
   const isWorking = busy || isUploadingCsv || isUploadingXlsx || isCreatingSession
 
-  const handleClose = () => dispatch(closeUpload())
-
   return (
     <div className="modal-backdrop" role="presentation" onClick={handleClose}>
       <div
         className="modal"
         role="dialog"
+        aria-modal="true"
         aria-labelledby="upload-title"
         onClick={(e) => e.stopPropagation()}
         style={{ maxWidth: 840 }}

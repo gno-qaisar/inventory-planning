@@ -32,7 +32,6 @@ export function TopBar() {
         >
           Export All (CSV)
         </button>
-        <span className="proto-badge">Prototype · mock data</span>
       </div>
     </header>
   )

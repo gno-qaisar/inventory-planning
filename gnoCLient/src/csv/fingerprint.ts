@@ -16,7 +16,3 @@ export async function fingerprintFile(file: File): Promise<FileFingerprint> {
   const hash = await sha256Hex(combined.buffer)
   return { name: file.name, size: file.size, hash }
 }
-
-export function isIdenticalFile(a: FileFingerprint, b: FileFingerprint): boolean {
-  return a.name === b.name && a.size === b.size && a.hash === b.hash
-}

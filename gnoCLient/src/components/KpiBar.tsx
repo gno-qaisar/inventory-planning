@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { stockTone } from '@gno/shared'
+import { useMemo, type KeyboardEvent } from 'react'
+import { getWorstTone } from '@gno/shared'
 import type { ComputedSkuRow } from '@gno/shared'
 import { formatInt, formatUsd } from '../domain/format'
 import type { EomHealthFilter } from '../store/workspaceSlice'
@@ -8,13 +8,6 @@ interface Props {
   rows: ComputedSkuRow[]
   activeFilter: EomHealthFilter
   onFilter: (f: EomHealthFilter) => void
-}
-
-function getWorstTone(row: ComputedSkuRow): 'red' | 'yellow' | 'green' {
-  const tones = row.eom.map((v) => stockTone(v, row.avgForecastExclZero, row.bufferMonths))
-  if (tones.some((t) => t === 'red')) return 'red'
-  if (tones.some((t) => t === 'yellow')) return 'yellow'
-  return 'green'
 }
 
 function formatRevenueCompact(val: number): string {
@@ -50,13 +43,24 @@ export function KpiBar({ rows, activeFilter, onFilter }: Props) {
     return { red, yellow, green, orderNow, totalForecastUnits, totalRevenue }
   }, [rows])
 
+  const handleKeyDown = (f: EomHealthFilter) => (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      onFilter(f)
+    }
+  }
+
   return (
     <div className="stats">
       {/* Products */}
       <div
         className={`stat slate${activeFilter === 'all' ? ' active' : ''}`}
         style={{ cursor: 'pointer' }}
+        role="button"
+        tabIndex={0}
+        aria-pressed={activeFilter === 'all'}
         onClick={() => onFilter('all')}
+        onKeyDown={handleKeyDown('all')}
       >
         <span className="label">Products</span>
         <span className="value">{formatInt(rows.length)}</span>
@@ -66,7 +70,11 @@ export function KpiBar({ rows, activeFilter, onFilter }: Props) {
       <div
         className="stat red"
         style={{ cursor: 'pointer' }}
+        role="button"
+        tabIndex={0}
+        aria-pressed={activeFilter === 'red'}
         onClick={() => onFilter(activeFilter === 'red' ? 'all' : 'red')}
+        onKeyDown={handleKeyDown(activeFilter === 'red' ? 'all' : 'red')}
       >
         <span className="label">Order now</span>
         <span className="value">{formatInt(stats.orderNow)}</span>
@@ -76,7 +84,11 @@ export function KpiBar({ rows, activeFilter, onFilter }: Props) {
       <div
         className={`stat red${activeFilter === 'red' ? ' active' : ''}`}
         style={{ cursor: 'pointer' }}
+        role="button"
+        tabIndex={0}
+        aria-pressed={activeFilter === 'red'}
         onClick={() => onFilter(activeFilter === 'red' ? 'all' : 'red')}
+        onKeyDown={handleKeyDown(activeFilter === 'red' ? 'all' : 'red')}
       >
         <span className="label">Stockout risk</span>
         <span className="value">{formatInt(stats.red)}</span>
@@ -86,7 +98,11 @@ export function KpiBar({ rows, activeFilter, onFilter }: Props) {
       <div
         className={`stat amber${activeFilter === 'yellow' ? ' active' : ''}`}
         style={{ cursor: 'pointer' }}
+        role="button"
+        tabIndex={0}
+        aria-pressed={activeFilter === 'yellow'}
         onClick={() => onFilter(activeFilter === 'yellow' ? 'all' : 'yellow')}
+        onKeyDown={handleKeyDown(activeFilter === 'yellow' ? 'all' : 'yellow')}
       >
         <span className="label">Below buffer</span>
         <span className="value">{formatInt(stats.yellow)}</span>
@@ -96,7 +112,11 @@ export function KpiBar({ rows, activeFilter, onFilter }: Props) {
       <div
         className={`stat green${activeFilter === 'green' ? ' active' : ''}`}
         style={{ cursor: 'pointer' }}
+        role="button"
+        tabIndex={0}
+        aria-pressed={activeFilter === 'green'}
         onClick={() => onFilter(activeFilter === 'green' ? 'all' : 'green')}
+        onKeyDown={handleKeyDown(activeFilter === 'green' ? 'all' : 'green')}
       >
         <span className="label">Healthy</span>
         <span className="value">{formatInt(stats.green)}</span>
