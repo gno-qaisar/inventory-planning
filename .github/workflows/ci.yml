@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main, fix/*, feat/*]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    name: Typecheck, Test, and Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.8.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck API
+        run: pnpm --filter gno-task exec tsc --noEmit
+
+      - name: Typecheck Client
+        run: pnpm --filter gnoclient exec tsc --noEmit
+
+      - name: Run API Tests
+        run: pnpm --filter gno-task test
+
+      - name: Build Shared Package
+        run: pnpm --filter @gno/shared build
+
+      - name: Build API
+        run: pnpm --filter gno-task build
+
+      - name: Build Client
+        run: pnpm --filter gnoclient build
+

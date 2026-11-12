@@ -1,0 +1,11 @@
+{
+  "name": "inventory-forecasting-monorepo",
+  "private": true,
+  "packageManager": "pnpm@10.8.0",
+  "scripts": {
+    "build": "pnpm --filter @gno/shared build && pnpm --filter gno-task build && pnpm --filter gnoclient build",
+    "test": "pnpm --filter gno-task test",
+    "lint": "pnpm -r lint"
+  }
+}
+

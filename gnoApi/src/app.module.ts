@@ -17,6 +17,9 @@ import { WorkbookModule } from './workbook/workbook.module'
     }),
     MulterModule.register({
       storage: memoryStorage(),
+      limits: {
+        fileSize: 25 * 1024 * 1024,
+      },
     }),
     DbModule,
     UploadModule,

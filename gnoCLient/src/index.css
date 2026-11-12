@@ -366,41 +366,65 @@ main {
   width: 100% !important;
 }
 
-.ag-theme-quartz .ag-cell {
+.ag-theme-quartz .ag-cell,
+.ag-theme-quartz .ag-cell-wrapper,
+.ag-theme-quartz .ag-cell-value {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   text-align: center !important;
+  min-width: 0 !important;
 }
 
-.ag-theme-quartz .ag-cell,
 .ag-theme-quartz .ag-cell-wrapper,
 .ag-theme-quartz .ag-cell-value {
+  height: 100% !important;
+  width: 100% !important;
+}
+
+.ag-theme-quartz .ag-cell {
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
-  min-width: 0 !important;
-  justify-content: center !important;
-  text-align: center !important;
 }
 
+.ag-theme-quartz .ag-pinned-left-cols-container .ag-cell,
 .ag-pinned-left-cols-container .ag-cell {
-  background: inherit;
+  background-color: #ffffff !important;
+  z-index: 2;
+}
+
+.ag-theme-quartz .ag-pinned-left-header,
+.ag-pinned-left-header {
+  background-color: #f9fafb !important;
+  z-index: 2;
+}
+
+.ag-theme-quartz .ag-row:hover .ag-pinned-left-cols-container .ag-cell,
+.ag-theme-quartz .ag-row.ag-row-hover .ag-cell {
+  background-color: #f5f3ef !important;
+}
+
+.ag-theme-quartz .ag-row.ag-row-selected .ag-cell {
+  background-color: #f5f3ef !important;
 }
 
 /* ── Cell Components ──────────────────────────────────────────────────── */
 .prodname {
-  max-width: 260px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  max-width: 100% !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
   text-align: center;
 }
 
 .title-cell {
-  display: inline-block !important;
+  display: block !important;
   width: 100% !important;
   max-width: 100% !important;
+  min-width: 0 !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
@@ -454,18 +478,36 @@ main {
 }
 
 /* 8-Month Outlook Blocks */
+.ag-theme-quartz .ag-cell[col-id="outlook"],
+.ag-theme-quartz .ag-cell[col-id="outlook"] .ag-cell-wrapper,
+.ag-theme-quartz .ag-cell[col-id="outlook"] .ag-cell-value {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 100% !important;
+  width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
 .outlook {
-  display: inline-flex;
-  gap: 2px;
-  align-items: center;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 2.5px !important;
+  height: 100% !important;
+  margin: 0 auto !important;
   cursor: default;
 }
 
 .sq {
-  width: 12px;
+  width: 11px;
   height: 10px;
-  border-radius: 2.5px;
+  border-radius: 2px;
   flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
 }
 .sq.healthy {
   background: var(--green-dot);
@@ -483,19 +525,32 @@ main {
 }
 
 /* Editable Inputs (3PL, in production, etc.) */
+.ag-theme-quartz .ag-cell:has(.edit-input) {
+  overflow: visible !important;
+}
+
+.ag-theme-quartz .ag-cell:has(.edit-input):focus,
+.ag-theme-quartz .ag-cell:has(.edit-input).ag-cell-focus,
+.ag-theme-quartz .ag-cell:focus-within {
+  outline: none !important;
+  border-color: transparent !important;
+}
+
 .edit-input {
-  width: 70px;
-  height: 28px;
+  width: 72px;
+  height: 26px;
+  line-height: 24px;
   text-align: center;
-  padding: 0 6px;
+  padding: 0 4px;
   border: 1px solid var(--gold-300);
   background: #fffbeb;
-  border-radius: 6px;
+  border-radius: 5px;
   font-size: 12px;
   font-weight: 500;
   color: var(--gray-800);
   font-family: inherit;
   box-sizing: border-box;
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .edit-input:hover {
@@ -504,16 +559,18 @@ main {
 }
 
 .edit-input:focus {
-  outline: none;
-  border-color: var(--gold-500);
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(212, 176, 86, 0.3);
+  outline: none !important;
+  border-color: var(--gold-500) !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 0 2px rgba(212, 176, 86, 0.4) !important;
 }
 
 /* Buttons */
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  white-space: nowrap;
   gap: 5px;
   cursor: pointer;
   border: 1px solid var(--gray-200);
@@ -575,10 +632,24 @@ main {
 }
 
 .total-row td,
-.ag-row-pinned {
+.ag-row-pinned,
+.ag-row-pinned .ag-cell,
+.ag-floating-bottom,
+.ag-floating-bottom .ag-row,
+.ag-floating-bottom .ag-cell,
+.ag-floating-bottom .ag-pinned-left-cols-container .ag-cell,
+.ag-theme-quartz .ag-floating-bottom .ag-cell,
+.ag-theme-quartz .ag-floating-bottom .ag-pinned-left-cols-container .ag-cell,
+.ag-theme-quartz .ag-row-pinned .ag-cell {
   background: var(--cream) !important;
-  font-weight: 600;
-  border-top: 1px solid var(--gray-200) !important;
+  font-weight: 600 !important;
+  color: var(--gray-900) !important;
+}
+
+.ag-floating-bottom,
+.ag-row-pinned {
+  border-top: 1px solid var(--gray-300) !important;
+  z-index: 5 !important;
 }
 
 /* ── Tooltip (White Card matching prototype) ──────────────────────────── */

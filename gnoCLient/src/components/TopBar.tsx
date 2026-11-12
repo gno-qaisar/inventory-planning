@@ -1,13 +1,13 @@
 import { useMemo } from 'react'
 import { exportAllCsvs } from '../csv/export'
 import { buildMonthLabels } from '@gno/shared'
-import { useAppDispatch, useAppSelector } from '../store/hooks'
-import { openUpload, selectLoaded, selectRows } from '../store/workspaceSlice'
+import { useAppDispatch } from '../store/hooks'
+import { openUpload } from '../store/workspaceSlice'
+import { useForecastData } from '../store/useForecastData'
 
 export function TopBar() {
   const dispatch = useAppDispatch()
-  const loaded = useAppSelector(selectLoaded)
-  const rows = useAppSelector(selectRows)
+  const { loaded, rawRows } = useForecastData()
   const monthLabels = useMemo(() => buildMonthLabels(), [])
 
   return (
@@ -28,11 +28,10 @@ export function TopBar() {
           type="button"
           className="btn sm gold"
           disabled={!loaded}
-          onClick={() => exportAllCsvs(rows, monthLabels)}
+          onClick={() => exportAllCsvs(rawRows, monthLabels)}
         >
           Export All (CSV)
         </button>
-        <span className="proto-badge">Prototype · mock data</span>
       </div>
     </header>
   )

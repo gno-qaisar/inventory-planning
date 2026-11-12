@@ -1,17 +1,18 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ICellRendererParams } from 'ag-grid-community'
 import type { ComputedSkuRow } from '@gno/shared'
-import { buildMonthLabels, MONTH_INDEXES, monthHeader, stockTone } from '@gno/shared'
+import {
+  buildMonthLabels,
+  getWorstHealth,
+  HEALTH_LABEL,
+  MONTH_INDEXES,
+  monthHeader,
+  stockTone,
+} from '@gno/shared'
 import { formatInt } from '../domain/format'
 
 const MONTH_LABELS = buildMonthLabels()
-
-const HEALTH_LABEL: Record<string, string> = {
-  healthy: 'Healthy',
-  belowBuffer: 'Below buffer',
-  stockoutRisk: 'Stockout risk',
-}
 
 interface TooltipState {
   x: number
@@ -23,12 +24,6 @@ export function OutlookCell({ data }: ICellRendererParams<ComputedSkuRow>) {
   const [tooltip, setTooltip] = useState<TooltipState>({ x: 0, y: 0, visible: false })
   const containerRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    return () => {
-      setTooltip({ x: 0, y: 0, visible: false })
-    }
-  }, [])
-
   if (!data || !data.eom || data.eom.length === 0) return null
 
   const healths = data.eom.map((v) => {
@@ -36,11 +31,7 @@ export function OutlookCell({ data }: ICellRendererParams<ComputedSkuRow>) {
     return tone === 'red' ? 'stockoutRisk' : tone === 'yellow' ? 'belowBuffer' : 'healthy'
   })
 
-  const worstHealth = healths.includes('stockoutRisk')
-    ? 'stockoutRisk'
-    : healths.includes('belowBuffer')
-      ? 'belowBuffer'
-      : 'healthy'
+  const worstHealth = getWorstHealth(data)
 
   const updatePosition = (e: React.MouseEvent) => {
     const pad = 14

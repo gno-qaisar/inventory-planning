@@ -1,26 +1,26 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { parseCsvFile } from '../csv/parse'
 import { validateUploadPair } from '@gno/shared'
 import type { ParsedCsvFile } from '@gno/shared'
 import { DropZone } from './DropZone'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 import {
   useUploadCsvMutation,
   useUploadXlsxMutation,
 } from '../store/api/uploadApi'
 import { useCreateSessionMutation } from '../store/api/forecastApi'
 import {
-  applyApiRows,
   closeUpload,
-  loadLocalWorkspace,
   setSessionId,
-  setUseApi,
   setValidationFailed,
 } from '../store/workspaceSlice'
 
 export function UploadModal() {
   const uploadOpen = useAppSelector((s) => s.workspace.uploadOpen)
   const dispatch = useAppDispatch()
+  const modalRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(modalRef, uploadOpen)
 
   const [sales, setSales] = useState<ParsedCsvFile | null>(null)
   const [inventory, setInventory] = useState<ParsedCsvFile | null>(null)
@@ -45,10 +45,27 @@ export function UploadModal() {
   const validation = useMemo(() => validateUploadPair(sales, inventory), [sales, inventory])
 
   useEffect(() => {
-    if (validation.issues.length > 0) {
-      dispatch(setValidationFailed(true))
+    dispatch(setValidationFailed(validation.issues.length > 0 || !!parseError))
+    return () => {
+      dispatch(setValidationFailed(false))
     }
-  }, [validation.issues, dispatch])
+  }, [validation.issues, parseError, dispatch])
+
+  const handleClose = () => {
+    dispatch(setValidationFailed(false))
+    dispatch(closeUpload())
+  }
+
+  useEffect(() => {
+    if (!uploadOpen) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleClose()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [uploadOpen])
 
   if (!uploadOpen) return null
 
@@ -90,16 +107,6 @@ export function UploadModal() {
     setInventory(sales)
   }
 
-  const loadLocal = () => {
-    if (!sales || !inventory || !validation.canLoad) return
-    dispatch(
-      loadLocalWorkspace({
-        sales: sales.salesRows,
-        inventory: inventory.inventoryRows,
-      }),
-    )
-  }
-
   const loadFromApi = async () => {
     if (!sales?.file || !inventory?.file || !validation.canLoad) return
     setBusy(true)
@@ -119,21 +126,7 @@ export function UploadModal() {
         inventorySessionId: invRes.sessionId,
       }).unwrap()
 
-      dispatch(
-        loadLocalWorkspace({
-          sales: sales.salesRows,
-          inventory: inventory.inventoryRows,
-        }),
-      )
-
       dispatch(setSessionId(sessionRes.sessionId))
-      dispatch(applyApiRows(sessionRes.rows))
-      dispatch(setUseApi(true))
-      try {
-        localStorage.setItem('gno_active_session_id', sessionRes.sessionId)
-      } catch {
-        // Ignore localStorage quota errors
-      }
       dispatch(closeUpload())
     } catch {
       setParseError('API upload failed. Ensure backend server is running.')
@@ -171,13 +164,13 @@ export function UploadModal() {
 
   const isWorking = busy || isUploadingCsv || isUploadingXlsx || isCreatingSession
 
-  const handleClose = () => dispatch(closeUpload())
-
   return (
     <div className="modal-backdrop" role="presentation" onClick={handleClose}>
       <div
+        ref={modalRef}
         className="modal"
         role="dialog"
+        aria-modal="true"
         aria-labelledby="upload-title"
         onClick={(e) => e.stopPropagation()}
         style={{ maxWidth: 840 }}
@@ -260,19 +253,11 @@ export function UploadModal() {
           </button>
           <button
             type="button"
-            className="btn btn--ghost"
-            disabled={!validation.canLoad || isWorking}
-            onClick={loadLocal}
-          >
-            Load Local (Offline)
-          </button>
-          <button
-            type="button"
             className="btn btn--primary"
             disabled={!validation.canLoad || isWorking}
             onClick={() => void loadFromApi()}
           >
-            Load from API
+            Load into Workspace
           </button>
         </div>
       </div>

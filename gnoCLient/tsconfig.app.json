@@ -18,11 +18,11 @@
 
     /* Path aliases */
     "paths": {
-      "@gno/shared": ["../packages/shared/src"],
-      "*": ["./*"]
+      "@gno/shared": ["../packages/shared/src"]
     },
 
-    /* Linting */
+    /* Strict & Linting */
+    "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,

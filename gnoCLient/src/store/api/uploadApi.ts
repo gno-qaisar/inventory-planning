@@ -1,5 +1,5 @@
 import { baseApi } from './baseApi'
-import type { SessionDto, UploadCsvResponse, UploadXlsxResponse } from '@gno/shared'
+import type { UploadCsvResponse, UploadXlsxResponse } from '@gno/shared'
 
 export const uploadApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -11,13 +11,8 @@ export const uploadApi = baseApi.injectEndpoints({
       query: (formData) => ({ url: '/upload/xlsx', method: 'POST', body: formData }),
       invalidatesTags: ['Session'],
     }),
-    getUploadHistory: builder.query<SessionDto[], void>({
-      query: () => '/upload/history',
-      providesTags: ['Session'],
-    }),
   }),
 })
 
-export const { useUploadCsvMutation, useUploadXlsxMutation, useGetUploadHistoryQuery } =
-  uploadApi
+export const { useUploadCsvMutation, useUploadXlsxMutation } = uploadApi
 

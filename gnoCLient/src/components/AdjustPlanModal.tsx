@@ -1,37 +1,23 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   buildMonthLabels,
   monthHeader,
   stockTone,
+  priorYearMonthKey,
+  getWorstHealth,
+  suggestOrders,
+  DEFAULT_GROWTH_MULTIPLE,
+  DEFAULT_LEAD_TIME_DAYS,
+  DEFAULT_BUFFER_MONTHS,
   MONTH_INDEXES,
   type ComputedSkuRow,
   type ManualOverrides,
   type MonthIndex,
 } from '@gno/shared'
 import { formatInt } from '../domain/format'
-import { useAppDispatch } from '../store/hooks'
-import {
-  resetLocalOverrides,
-  setMultipleMonth,
-  setOrderMonth,
-} from '../store/workspaceSlice'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 
 const MONTH_LABELS = buildMonthLabels()
-
-function priorYearMonthKey(monthIndex: number): string {
-  const anchor = new Date(2026, 9, 1) // Oct 2026
-  const forecastMonth = new Date(anchor.getFullYear(), anchor.getMonth() + monthIndex, 1)
-  const prior = new Date(forecastMonth.getFullYear() - 1, forecastMonth.getMonth(), 1)
-  return `${prior.getFullYear()}-${String(prior.getMonth() + 1).padStart(2, '0')}`
-}
-
-function getWorstHealth(row: ComputedSkuRow): 'stockoutRisk' | 'belowBuffer' | 'healthy' {
-  if (!row || !row.eom || !Array.isArray(row.eom) || row.eom.length === 0) return 'healthy'
-  const tones = row.eom.map((v) => stockTone(v, row.avgForecastExclZero, row.bufferMonths))
-  if (tones.some((t) => t === 'red')) return 'stockoutRisk'
-  if (tones.some((t) => t === 'yellow')) return 'belowBuffer'
-  return 'healthy'
-}
 
 interface Props {
   row: ComputedSkuRow
@@ -40,7 +26,18 @@ interface Props {
 }
 
 export function AdjustPlanModal({ row, onClose, onOverride }: Props) {
-  const dispatch = useAppDispatch()
+  const drawerRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(drawerRef, true)
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
   const [localLeadTime, setLocalLeadTime] = useState(String(row.leadTimeDays))
   const [localBuffer, setLocalBuffer] = useState(String(row.bufferMonths))
 
@@ -61,67 +58,91 @@ export function AdjustPlanModal({ row, onClose, onOverride }: Props) {
     return init
   })
 
+  useEffect(() => {
+    setLocalLeadTime(String(row.leadTimeDays))
+    setLocalBuffer(String(row.bufferMonths))
+    const mults: Partial<Record<MonthIndex, string>> = {}
+    const ords: Partial<Record<MonthIndex, string>> = {}
+    for (const [i, m] of MONTH_INDEXES.entries()) {
+      const pm = row.multiplesPerMonth?.[m]
+      mults[m] = String(pm !== undefined ? pm : row.growthMultiple || 1.1)
+      ords[m] = String(row.orders[i] || 0)
+    }
+    setLocalMultiples(mults)
+    setLocalOrders(ords)
+  }, [row])
+
   const commitLeadTime = () => {
     const v = parseFloat(localLeadTime)
-    if (!isNaN(v) && v > 0) onOverride(row.sku, { leadTimeDays: v })
+    if (!isNaN(v) && v > 0 && v !== row.leadTimeDays) onOverride(row.sku, { leadTimeDays: v })
   }
 
   const commitBuffer = () => {
     const v = parseFloat(localBuffer)
-    if (!isNaN(v) && v >= 0) onOverride(row.sku, { bufferMonths: v })
+    if (!isNaN(v) && v >= 0 && v !== row.bufferMonths) onOverride(row.sku, { bufferMonths: v })
   }
 
   const commitMultiple = (month: MonthIndex, valStr: string) => {
     const v = parseFloat(valStr)
     if (!isNaN(v) && v >= 0) {
-      dispatch(setMultipleMonth({ sku: row.sku, month, value: v }))
-      onOverride(row.sku, { multiplesPerMonth: { ...(row.multiplesPerMonth ?? {}), [month]: v } })
+      onOverride(row.sku, { multiplesPerMonth: { [month]: v } })
     }
   }
 
   const commitOrder = (month: MonthIndex, valStr: string) => {
     const v = parseInt(valStr, 10)
     const val = isNaN(v) ? 0 : Math.max(0, v)
-    dispatch(setOrderMonth({ sku: row.sku, month, value: val }))
-    const existingOrders: Partial<Record<MonthIndex, number>> = {}
-    MONTH_INDEXES.forEach((m, idx) => {
-      existingOrders[m] = row.orders[idx] || 0
-    })
-    existingOrders[month] = val
-    onOverride(row.sku, { ordersByMonth: existingOrders })
+    onOverride(row.sku, { ordersByMonth: { [month]: val } })
   }
 
   const handleSuggestOrders = () => {
-    const threshold = 0.25 * row.avgForecastExclZero * row.bufferMonths
-    const newOrders: Partial<Record<MonthIndex, number>> = {}
+    const starting = row.startingStock + (row.threePlInventory ?? 0)
+    const currentInbound = (row.currentInbound || 0) + (row.inventoryInProduction || 0)
+    const orders = suggestOrders(
+      row.forecast,
+      Number(localBuffer) || DEFAULT_BUFFER_MONTHS,
+      Number(localLeadTime) || DEFAULT_LEAD_TIME_DAYS,
+      starting,
+      currentInbound,
+      Array(8).fill(0),
+    )
+
+    const newOrdersMap: Partial<Record<MonthIndex, number>> = {}
     MONTH_INDEXES.forEach((m, idx) => {
-      newOrders[m] = row.orders[idx] || 0
+      const qty = orders[idx] || 0
+      newOrdersMap[m] = qty
+      setLocalOrders((p) => ({ ...p, [m]: String(qty) }))
     })
-    for (const [i, m] of MONTH_INDEXES.entries()) {
-      const eomVal = row.eom[i]
-      if (eomVal < threshold) {
-        const qty = Math.ceil(threshold - eomVal)
-        dispatch(setOrderMonth({ sku: row.sku, month: m, value: qty }))
-        setLocalOrders((p) => ({ ...p, [m]: String(qty) }))
-        newOrders[m] = qty
-      }
-    }
-    onOverride(row.sku, { ordersByMonth: newOrders })
+    onOverride(row.sku, { ordersByMonth: newOrdersMap })
   }
 
   const handleReset = () => {
-    dispatch(resetLocalOverrides())
-    setLocalLeadTime(String(row.leadTimeDays))
-    setLocalBuffer(String(row.bufferMonths))
+    const clearedMultiples: Partial<Record<MonthIndex, number>> = {}
+    const clearedOrders: Partial<Record<MonthIndex, number>> = {}
     for (const m of MONTH_INDEXES) {
-      setLocalMultiples((p) => ({ ...p, [m]: '1.1' }))
-      setLocalOrders((p) => ({ ...p, [m]: '0' }))
+      clearedMultiples[m] = DEFAULT_GROWTH_MULTIPLE
+      clearedOrders[m] = 0
     }
+    setLocalLeadTime(String(DEFAULT_LEAD_TIME_DAYS))
+    setLocalBuffer(String(DEFAULT_BUFFER_MONTHS))
+    setLocalMultiples(
+      Object.fromEntries(MONTH_INDEXES.map((m) => [m, String(DEFAULT_GROWTH_MULTIPLE)])),
+    )
+    setLocalOrders(
+      Object.fromEntries(MONTH_INDEXES.map((m) => [m, '0'])),
+    )
+    onOverride(row.sku, {
+      leadTimeDays: DEFAULT_LEAD_TIME_DAYS,
+      bufferMonths: DEFAULT_BUFFER_MONTHS,
+      growthMultiple: DEFAULT_GROWTH_MULTIPLE,
+      multiplesPerMonth: clearedMultiples,
+      ordersByMonth: clearedOrders,
+    })
   }
 
   const inboundByMonth = useMemo(() => {
     const landing = Array.from({ length: 8 }, () => 0)
-    landing[0] += row.currentInbound
+    landing[0] += (row.currentInbound || 0) + (row.inventoryInProduction || 0)
     for (let i = 0; i < 8; i++) {
       const landIndex = i + row.landingOffset
       if (landIndex < 8) landing[landIndex] += row.orders[i]
@@ -145,9 +166,9 @@ export function AdjustPlanModal({ row, onClose, onOverride }: Props) {
   return (
     <>
       <div className="overlay" onClick={onClose} role="presentation" />
-      <div className="drawer open" role="dialog" aria-label="Adjust Plan">
+      <div ref={drawerRef} className="drawer open" role="dialog" aria-modal="true" aria-label="Adjust Plan">
         <div className="drawer-head">
-          <button className="drawer-close" onClick={onClose} type="button">
+          <button className="drawer-close" onClick={onClose} type="button" aria-label="Close drawer">
             ×
           </button>
           <h2>{row.title || row.sku}</h2>

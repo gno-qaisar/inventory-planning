@@ -1,44 +1,44 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm'
+import { numericTransformer } from '../transformers/numeric.transformer'
 
 @Entity('raw_inventory')
 export class RawInventory {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
-  id: number
+  id!: number
 
   @Column({ type: 'varchar' })
-  sessionId: string
+  sessionId!: string
 
   @Column({ type: 'varchar', nullable: true })
-  marketplace: string | null
+  marketplace?: string | null
 
   @Column({ type: 'varchar', nullable: true })
-  asin: string | null
+  asin?: string | null
 
   @Column({ type: 'varchar', nullable: true })
-  sku: string | null
+  sku?: string | null
 
   @Column({ type: 'varchar', nullable: true })
-  title: string | null
+  title?: string | null
 
-  @Column({ type: 'numeric', default: 0 })
-  velocity: number
-
-  @Column({ type: 'int', default: 0 })
-  fbaActive: number
+  @Column({ type: 'numeric', default: 0, transformer: numericTransformer })
+  velocity!: number
 
   @Column({ type: 'int', default: 0 })
-  fbaReserved: number
+  fbaActive!: number
 
   @Column({ type: 'int', default: 0 })
-  fbaInbound: number
+  fbaReserved!: number
 
   @Column({ type: 'int', default: 0 })
-  awdTotal: number
+  fbaInbound!: number
 
   @Column({ type: 'int', default: 0 })
-  warehouse: number
+  awdTotal!: number
 
   @Column({ type: 'int', default: 0 })
-  fbaFull: number
+  warehouse!: number
+
+  @Column({ type: 'int', default: 0 })
+  fbaFull!: number
 }
-

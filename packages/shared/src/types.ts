@@ -65,7 +65,7 @@ export interface FileFingerprint {
 }
 
 export interface ParsedCsvFile {
-  file: any
+  file: File | null
   fingerprint: FileFingerprint
   headers: string[]
   kind: CsvKind
@@ -93,15 +93,10 @@ export interface UploadValidation {
   summary: JoinSummary | null
 }
 
-export type WorkspaceView =
-  | 'products'
-  | 'annual'
-  | 'asin'
-  | 'sellerboard'
-  | 'sellerboard-inventory'
-  | 'history'
+export type WorkspaceView = 'products' | 'annual'
 export type AnnualTab = 'forecast' | 'eom' | 'purchase' | 'sales'
-export type SkuFilter = 'all' | 'critical' | 'needsInput'
+export type SkuHealth = 'stockoutRisk' | 'belowBuffer' | 'healthy'
+export type SkuTone = 'red' | 'yellow' | 'green'
 
 export interface ManualOverrides {
   growthMultiple?: number
@@ -166,8 +161,8 @@ export interface ComputedSkuRow {
   firstRiskMonth: number | null
   firstRiskMonthName: string
   orderBy: string
-  forecastOverrideMonths: Set<MonthIndex> | MonthIndex[]
-  orderMonths: Set<MonthIndex> | MonthIndex[]
+  forecastOverrideMonths: MonthIndex[]
+  orderMonths: MonthIndex[]
   multiplesPerMonth?: Partial<Record<MonthIndex, number>>
   threePlInventory?: number
   inventoryInProduction?: number
@@ -189,19 +184,8 @@ export interface SessionDto {
   notes?: string | null
 }
 
-export interface OverridePatch {
-  sessionId: string
-  sku: string
-  patch: Partial<ManualOverrides>
-}
-
-export interface ComputeRequest {
-  sessionId: string
-}
-
 export interface RecalcResponse {
   rows: ComputedSkuRow[]
-  dirtyFlag: false
   recalculatedAt?: string
 }
 
@@ -216,6 +200,7 @@ export interface UploadCsvResponse {
 export interface UploadXlsxResponse {
   sessionId: string
   sheets: string[]
+  summaries: Record<string, number>
   asinCount?: number
   message?: string
 }

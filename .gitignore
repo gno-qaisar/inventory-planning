@@ -31,9 +31,7 @@ Thumbs.db
 !.env.example
 
 # Editor files
-.vscode/*
-!.vscode/settings.json
-!.vscode/extensions.json
+.vscode/
 .idea/
 *.suo
 *.ntvs*
@@ -44,4 +42,5 @@ Thumbs.db
 # Temporary files
 .tmp/
 .temp/
+gnoCLient/src/domain/chat.json
 

@@ -1,76 +1,23 @@
 import { useMemo } from 'react'
 import { AgGridReact } from 'ag-grid-react'
-import type { CellStyle, ColDef, ICellRendererParams } from 'ag-grid-community'
+import type { ColDef, ICellRendererParams } from 'ag-grid-community'
 import {
   buildMonthLabels,
   monthHeader,
-  stockTone,
   MONTH_INDEXES,
   type ComputedSkuRow,
 } from '@gno/shared'
 import { formatInt } from '../domain/format'
 import { gridTheme } from '../grid/theme'
-import { useAppSelector } from '../store/hooks'
-import { selectTotals, selectVisibleRows } from '../store/workspaceSlice'
+import { centerStyle, defaultColDef } from '../grid/gridDefaults'
+import { useForecastData } from '../store/useForecastData'
+import { MatrixMonthCell, StackedPinnedCell } from './cells/AnnualPlanCells'
+import { TitleCell } from './cells/TitleCell'
 
 const MONTH_LABELS = buildMonthLabels()
 
-const centerStyle: CellStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  textAlign: 'center',
-}
-
-// Matrix month cell matching prototype:
-// <span class="annual-cell"><span class="sold">123</span><span class="left healthy">456</span></span>
-interface MonthCellProps extends ICellRendererParams<ComputedSkuRow> {
-  monthIndex: number
-}
-
-function MatrixMonthCell({ data, monthIndex }: MonthCellProps) {
-  if (!data) return null
-  const forecastUnits = data.forecast?.[monthIndex] ?? 0
-  const stockLeft = data.eom?.[monthIndex] ?? 0
-  const tone = stockTone(stockLeft, data.avgForecastExclZero, data.bufferMonths)
-  const health = tone === 'red' ? 'stockoutRisk' : tone === 'yellow' ? 'belowBuffer' : 'healthy'
-
-  return (
-    <span className="annual-cell">
-      <span className="sold">{formatInt(forecastUnits)}</span>
-      <span className={`left ${health}`}>{formatInt(stockLeft)}</span>
-    </span>
-  )
-}
-
-// "All products" bottom pinned row cells matching prototype
-interface PinnedCellProps extends ICellRendererParams<ComputedSkuRow> {
-  monthIndex?: number
-  isTotal?: boolean
-}
-
-function StackedPinnedCell({ data, monthIndex, isTotal }: PinnedCellProps) {
-  if (!data) return null
-  if (isTotal) {
-    const totalFc = data.forecast?.reduce((a, b) => a + b, 0) || 0
-    return <span style={{ fontWeight: 600, textAlign: 'center', width: '100%' }}>{formatInt(totalFc)}</span>
-  }
-
-  const idx = monthIndex ?? 0
-  const fcUnits = data.forecast?.[idx] ?? 0
-  const stockUnits = data.eom?.[idx] ?? 0
-
-  return (
-    <span className="annual-cell">
-      <span className="sold">{formatInt(fcUnits)}</span>
-      <span className="left" style={{ color: 'var(--gray-700)' }}>{formatInt(stockUnits)}</span>
-    </span>
-  )
-}
-
 export function AnnualPlanView() {
-  const visibleRows = useAppSelector(selectVisibleRows)
-  const totals = useAppSelector(selectTotals)
+  const { visibleRows, totals } = useForecastData()
 
   const columnDefs = useMemo<ColDef<ComputedSkuRow>[]>(() => {
     const baseCols: ColDef<ComputedSkuRow>[] = [
@@ -84,18 +31,10 @@ export function AnnualPlanView() {
         cellStyle: centerStyle,
         cellRenderer: (p: ICellRendererParams<ComputedSkuRow>) => {
           if (!p.data) return null
-          if (p.data.sku === 'TOTAL') {
+          if (p.data.sku === '__TOTAL_ROW__') {
             return <strong>All products</strong>
           }
-          return (
-            <span
-              className="title-cell prodname"
-              title={p.data.title}
-              style={{ textAlign: 'center', width: '100%' }}
-            >
-              {p.data.title || p.data.sku}
-            </span>
-          )
+          return <TitleCell {...p} />
         },
       },
       {
@@ -106,7 +45,7 @@ export function AnnualPlanView() {
         cellClass: 'mono text-center',
         headerClass: 'text-center',
         cellStyle: centerStyle,
-        valueGetter: (p) => (p.data?.sku === 'TOTAL' ? '' : p.data?.asin || ''),
+        valueGetter: (p) => (p.data?.sku === '__TOTAL_ROW__' ? '' : p.data?.asin || ''),
       },
     ]
 
@@ -118,7 +57,7 @@ export function AnnualPlanView() {
       cellClass: 'text-center',
       cellStyle: centerStyle,
       cellRenderer: (p: ICellRendererParams<ComputedSkuRow>) => {
-        if (p.data?.sku === 'TOTAL') {
+        if (p.data?.sku === '__TOTAL_ROW__') {
           return <StackedPinnedCell {...p} monthIndex={i} />
         }
         return <MatrixMonthCell {...p} monthIndex={i} />
@@ -133,7 +72,7 @@ export function AnnualPlanView() {
       cellClass: 'text-center',
       cellStyle: centerStyle,
       cellRenderer: (p: ICellRendererParams<ComputedSkuRow>) => {
-        if (p.data?.sku === 'TOTAL') {
+        if (p.data?.sku === '__TOTAL_ROW__') {
           return <StackedPinnedCell {...p} isTotal />
         }
         const totalUnits = p.data ? p.data.forecast.reduce((a, b) => a + b, 0) : 0
@@ -150,12 +89,17 @@ export function AnnualPlanView() {
       visibleRows.reduce((sum, r) => sum + (r.forecast[i] || 0), 0),
     )
     const totalStockByMonth = MONTH_INDEXES.map((_, i) =>
-      visibleRows.reduce((sum, r) => sum + (r.eom[i] || 0), 0),
+      visibleRows.reduce((sum, r) => sum + Math.max(0, r.eom[i] || 0), 0),
+    )
+    const totalOrdersByMonth = MONTH_INDEXES.map((_, i) =>
+      visibleRows.reduce((sum, r) => sum + (r.orders[i] || 0), 0),
     )
     const totalUnits = totalFcByMonth.reduce((a, b) => a + b, 0)
+    const totalOrders = totalOrdersByMonth.reduce((a, b) => a + b, 0)
+    const totalSales = visibleRows.reduce((sum, r) => sum + r.totalSales, 0)
 
     const totalRow: ComputedSkuRow = {
-      sku: 'TOTAL',
+      sku: '__TOTAL_ROW__',
       asin: '',
       parentAsin: '',
       title: 'All products',
@@ -164,9 +108,9 @@ export function AnnualPlanView() {
       needsManualInput: false,
       isCritical: false,
       isEdited: false,
-      growthMultiple: 1,
+      growthMultiple: 1.1,
       fallbackUnits: 0,
-      bufferMonths: 0,
+      bufferMonths: 1,
       leadTimeDays: 0,
       landingOffset: 0,
       sellingPrice: 0,
@@ -176,28 +120,19 @@ export function AnnualPlanView() {
       historyNetUnitsByMonth: {},
       forecast: totalFcByMonth,
       eom: totalStockByMonth,
-      orders: totalFcByMonth,
+      orders: totalOrdersByMonth,
       sales: totals.monthlySales,
-      totalSales: totals.projectedSales,
-      totalOrders: totalUnits,
-      unitsToOrder: totalUnits,
+      totalSales,
+      totalOrders,
+      unitsToOrder: totalOrders > 0 ? totalOrders : totalUnits,
       firstRiskMonth: null,
       firstRiskMonthName: '—',
       orderBy: '—',
-      forecastOverrideMonths: new Set(),
-      orderMonths: new Set(),
+      forecastOverrideMonths: [],
+      orderMonths: [],
     }
     return [totalRow]
   }, [visibleRows, totals])
-
-  const defaultColDef = useMemo<ColDef<ComputedSkuRow>>(() => ({
-    resizable: true,
-    sortable: true,
-    suppressHeaderMenuButton: true,
-    headerClass: 'text-center',
-    cellClass: 'text-center',
-    cellStyle: centerStyle,
-  }), [])
 
   return (
     <div style={{ flex: 1, height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
@@ -212,7 +147,10 @@ export function AnnualPlanView() {
         rowHeight={38}
         animateRows={false}
         enableCellTextSelection
-        getRowClass={(p) => (p.data?.sku === 'TOTAL' ? 'total-row' : undefined)}
+        suppressCellFocus={true}
+        tooltipShowMode="whenTruncated"
+        tooltipShowDelay={500}
+        getRowClass={(p) => (p.data?.sku === '__TOTAL_ROW__' ? 'total-row' : undefined)}
       />
     </div>
   )
