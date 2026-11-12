@@ -61,6 +61,7 @@ export function ProductsView() {
         animateRows={false}
         enableCellTextSelection
         tooltipShowMode="whenTruncated"
+        tooltipShowDelay={500}
         onCellValueChanged={onCellValueChanged}
       />
 

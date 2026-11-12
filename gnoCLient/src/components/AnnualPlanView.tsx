@@ -148,6 +148,7 @@ export function AnnualPlanView() {
         animateRows={false}
         enableCellTextSelection
         tooltipShowMode="whenTruncated"
+        tooltipShowDelay={500}
         getRowClass={(p) => (p.data?.sku === '__TOTAL_ROW__' ? 'total-row' : undefined)}
       />
     </div>

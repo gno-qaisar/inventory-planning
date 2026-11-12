@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import { useRecalculateMutation } from '../store/api/forecastApi'
 import { closeRecalcDialog, setDirtyFlag } from '../store/workspaceSlice'
@@ -9,6 +10,21 @@ export function RecalcDialog() {
   const dispatch = useAppDispatch()
   const [recalculate, { isLoading }] = useRecalculateMutation()
 
+  const handleLater = () => {
+    dispatch(closeRecalcDialog())
+  }
+
+  useEffect(() => {
+    if (!recalcDialogOpen && !dirtyFlag) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleLater()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [recalcDialogOpen, dirtyFlag])
+
   if ((!dirtyFlag && !recalcDialogOpen) || !sessionId) return null
 
   const handleRecalc = async () => {
@@ -19,10 +35,6 @@ export function RecalcDialog() {
     } catch (err) {
       console.error('Failed to recalculate forecasts', err)
     }
-  }
-
-  const handleLater = () => {
-    dispatch(closeRecalcDialog())
   }
 
   return (

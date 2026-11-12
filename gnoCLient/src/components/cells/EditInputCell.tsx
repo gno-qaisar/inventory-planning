@@ -9,21 +9,19 @@ export interface EditInputCellProps extends ICellRendererParams<ComputedSkuRow> 
 }
 
 export function EditInputCell({ data, field, onSave }: EditInputCellProps) {
-  if (!data) return null
-
-  if (data.sku === 'TOTAL' || data.sku === '__TOTAL_ROW__') {
-    const totalVal =
-      field === 'threePlInventory' ? data.threePlInventory ?? 0 : data.inventoryInProduction ?? 0
-    return <span>{formatInt(totalVal)}</span>
-  }
-
   const initial =
-    field === 'threePlInventory' ? data.threePlInventory ?? 0 : data.inventoryInProduction ?? 0
+    field === 'threePlInventory' ? data?.threePlInventory ?? 0 : data?.inventoryInProduction ?? 0
   const [val, setVal] = useState(String(initial))
 
   useEffect(() => {
     setVal(String(initial))
   }, [initial])
+
+  if (!data) return null
+
+  if (data.sku === 'TOTAL' || data.sku === '__TOTAL_ROW__') {
+    return <span>{formatInt(initial)}</span>
+  }
 
   const commitChange = () => {
     const num = Math.max(0, Math.round(Number(val) || 0))
